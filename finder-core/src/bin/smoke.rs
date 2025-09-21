@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;
@@ -6,8 +7,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use finder_core::{
-    add_or_update_file, commit, init_index, read_plain_text, scan_root, search, IndexUpdate,
-    SearchDomain, SearchQuery,
+    add_or_update_file, commit, init_index, load_index_state, read_plain_text, scan_root, search,
+    IndexUpdate, IndexedDocument, PlainTextExtraction, SearchDomain, SearchQuery,
 };
 
 const DEFAULT_INDEX_DIR: &str = "/tmp/finder-index";
@@ -31,6 +32,7 @@ struct Args {
     writer_threads: Option<usize>,
     writer_mem_mb: usize,
     max_bytes: u64,
+    sniff_bytes: usize,
     skip_exts: Vec<String>,
     scope: SearchDomain,
 }
@@ -49,6 +51,7 @@ impl Default for Args {
             writer_threads: None,
             writer_mem_mb: 384,
             max_bytes: DEFAULT_MAX_BYTES,
+            sniff_bytes: 8192,
             skip_exts: parse_exts(DEFAULT_SKIP_EXT),
             scope: SearchDomain::Both,
         }
@@ -111,6 +114,10 @@ impl Args {
                 "--max-bytes" => {
                     let value = next_value(&mut args, "--max-bytes")?;
                     config.max_bytes = parse_u64(&value, "--max-bytes")?;
+                }
+                "--sniff-bytes" => {
+                    let value = next_value(&mut args, "--sniff-bytes")?;
+                    config.sniff_bytes = parse_usize(&value, "--sniff-bytes")?;
                 }
                 "--skip-ext" => {
                     let value = next_value(&mut args, "--skip-ext")?;
@@ -191,6 +198,7 @@ fn print_usage() {
     eprintln!("  --commit-every <N>        Commit every N documents (default 1000)");
     eprintln!("  --commit-ms <T>           Commit every T milliseconds (default 2000)");
     eprintln!("  --max-bytes <B>           Skip files larger than this (default 1572864)");
+    eprintln!("  --sniff-bytes <N>         Bytes to sniff for binary detection (default 8192)");
     eprintln!(
         "  --skip-ext <list>         Comma-separated extensions to skip (default .pkg,.dmg,.app)"
     );
@@ -209,6 +217,7 @@ struct Stats {
     skipped_large: usize,
     skipped_ext: usize,
     skipped_zero: usize,
+    skipped_binary: usize,
     bytes_read: usize,
     commits: usize,
 }
@@ -245,18 +254,25 @@ fn run(args: Args) -> Result<(), Box<dyn Error>> {
 
     init_index(path_to_str(&args.index_dir)?)?;
 
+    let mut existing_index: HashMap<String, IndexedDocument> = if args.reindex {
+        HashMap::new()
+    } else {
+        load_index_state()?
+    };
+
     let start = Instant::now();
     let mut stats = Stats::default();
     let mut docs_since_commit = 0usize;
     let mut last_commit = Instant::now();
 
     println!(
-        "[CONFIG] threads={} writer_mem_mb={} commit_every={} commit_ms={} max_bytes={} skip_ext={:?} limit={} scope={:?}",
+        "[CONFIG] threads={} writer_mem_mb={} commit_every={} commit_ms={} max_bytes={} sniff_bytes={} skip_ext={:?} limit={} scope={:?}",
         writer_threads,
         args.writer_mem_mb,
         args.commit_every,
         args.commit_ms,
         args.max_bytes,
+        args.sniff_bytes,
         args.skip_exts,
         args.limit,
         args.scope
@@ -290,28 +306,49 @@ fn run(args: Args) -> Result<(), Box<dyn Error>> {
                 continue;
             }
 
-            let content_opt = if meta.size <= args.max_bytes {
-                let limit = args.max_bytes.min(usize::MAX as u64) as usize;
-                match read_plain_text(Path::new(&meta.path), limit) {
-                    Ok(opt) => {
-                        if let Some(ref content) = opt {
-                            stats.bytes_read += content.len();
-                        }
-                        opt
-                    }
-                    Err(err) => {
-                        eprintln!("[WARN] failed to read {}: {err}", meta.path);
-                        None
+            let identity = meta.identity();
+
+            if !args.reindex {
+                if let Some(existing) = existing_index.get(&identity) {
+                    if existing.matches_meta(&meta) {
+                        stats.skipped_dedup += 1;
+                        continue;
                     }
                 }
-            } else {
-                None
+            }
+
+            let snapshot = IndexedDocument::from_meta(&meta);
+            let limit = args.max_bytes.min(usize::MAX as u64) as usize;
+            let PlainTextExtraction {
+                content: content_opt,
+                bytes_read,
+                was_binary,
+            } = match read_plain_text(Path::new(&meta.path), limit, args.sniff_bytes) {
+                Ok(extraction) => extraction,
+                Err(err) => {
+                    eprintln!("[WARN] failed to read {}: {err}", meta.path);
+                    PlainTextExtraction {
+                        content: None,
+                        bytes_read: 0,
+                        was_binary: false,
+                    }
+                }
             };
 
-            match add_or_update_file(meta, content_opt, args.reindex)? {
+            stats.bytes_read += bytes_read;
+            if was_binary {
+                stats.skipped_binary += 1;
+            }
+
+            let update = add_or_update_file(meta, content_opt, args.reindex)?;
+            match update {
                 IndexUpdate::Added => stats.added += 1,
                 IndexUpdate::Updated => stats.updated += 1,
                 IndexUpdate::Skipped => stats.skipped_dedup += 1,
+            }
+
+            if matches!(update, IndexUpdate::Added | IndexUpdate::Updated) {
+                existing_index.insert(identity, snapshot);
             }
 
             docs_since_commit += 1;
@@ -333,7 +370,7 @@ fn run(args: Args) -> Result<(), Box<dyn Error>> {
 
     let total_elapsed = start.elapsed();
     println!(
-        "[INFO] files={} added={} updated={} skipped_dedup={} skipped_large={} skipped_ext={} skipped_zero={} bytes_read={}KB commits={} total={} s throughput={:.1} docs/min",
+        "[INFO] files={} added={} updated={} skipped_dedup={} skipped_large={} skipped_ext={} skipped_zero={} skipped_binary={} bytes_read={}KB commits={} total={} s throughput={:.1} docs/min",
         stats.files_seen,
         stats.added,
         stats.updated,
@@ -341,6 +378,7 @@ fn run(args: Args) -> Result<(), Box<dyn Error>> {
         stats.skipped_large,
         stats.skipped_ext,
         stats.skipped_zero,
+        stats.skipped_binary,
         stats.bytes_read / 1024,
         stats.commits,
         format_seconds(total_elapsed),

@@ -1,21 +1,37 @@
 # macOS
 .DS_Store
 
-# Xcode
-DerivedData/
-*.xcworkspace/
-xcuserdata/
-*.xcodeproj/project.xcworkspace/
-*.xcodeproj/xcuserdata/
+# Editor files
+*.swp
+*.swo
+*.orig
 
-# Swift Package Manager
+# Swift / Xcode
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+build/
+.swiftpm/
 .build/
 
-# Rust
-/target/
+# Swift Package Manager
+Packages/*/.build/
+Package.resolved
 
-# Logs
+# Rust / Cargo
+target/
+**/*.rs.bk
+
+# Logs & environment
 *.log
+*.tmp
+.env
 
-# VSCode
-.vscode/*.log
+# Local data sets / corpora
+corpora/
+*.sample
+
+# Misc
+.idea/
+.vscode/

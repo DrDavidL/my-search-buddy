@@ -1,0 +1,15 @@
+language = "C"
+include_guard = "FINDER_CORE_H"
+style = "both"
+pragma_once = true
+
+[defines]
+"feature = \"default\"" = "FINDER_CORE_DEFAULT"
+
+[export]
+include = ["finder_core"]
+
+[parse]
+parse_deps = false
+expand = ["finder_core"]
+extra_bindings = []

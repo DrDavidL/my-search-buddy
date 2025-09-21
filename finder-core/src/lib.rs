@@ -1,4 +1,5 @@
 mod extract_plain;
+pub mod ffi;
 mod indexer;
 mod query;
 mod scanner;
@@ -7,8 +8,10 @@ mod schema;
 pub use crate::query::{SearchDomain, SearchHit, SearchQuery};
 pub use crate::scanner::{scan_root, FileMeta};
 pub use crate::schema::build_schema;
-pub use extract_plain::read_plain_text;
-pub use indexer::{configure as configure_indexer, IndexSettings, IndexUpdate};
+pub use extract_plain::{read_plain_text, PlainTextExtraction};
+pub use indexer::{
+    configure as configure_indexer, load_index_state, IndexSettings, IndexUpdate, IndexedDocument,
+};
 
 #[cfg(test)]
 use once_cell::sync::Lazy;
@@ -34,6 +37,10 @@ pub fn add_or_update_file(
 
 pub fn commit() -> Result<()> {
     indexer::commit()
+}
+
+pub fn close_index() {
+    indexer::close()
 }
 
 pub fn search(q: SearchQuery) -> Result<Vec<SearchHit>> {

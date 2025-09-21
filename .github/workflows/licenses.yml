@@ -1,0 +1,22 @@
+name: License Check
+
+on:
+  pull_request:
+
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check
+
+  spm-licenses:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LicensePlist
+        run: brew install mono0926/license-plist/license-plist
+      - name: Verify Swift package licenses
+        run: license-plist --package-path mac-app --output-path build/licenses --require-license --fail-if-missing-license

@@ -17,6 +17,18 @@ pub struct FileMeta {
     pub dev: u64,
 }
 
+impl FileMeta {
+    /// Unique identifier for the file, preferring inode/dev when available and
+    /// falling back to the full path when running on filesystems without those.
+    pub fn identity(&self) -> String {
+        if self.inode != 0 || self.dev != 0 {
+            format!("{}:{}", self.dev, self.inode)
+        } else {
+            format!("path:{}", self.path)
+        }
+    }
+}
+
 const SKIP_DIR_NAMES: &[&str] = &[".git", "Library", "node_modules", ".Trash"];
 
 /// Scan the provided root directory, respecting ignore files, and return discovered file metadata.

@@ -45,6 +45,7 @@ pub struct SearchHit {
     pub name: String,
     pub score: f32,
     pub modified_at: Option<i64>,
+    pub size: Option<u64>,
 }
 
 pub fn search(query: SearchQuery) -> Result<Vec<SearchHit>> {
@@ -130,12 +131,14 @@ pub fn search(query: SearchQuery) -> Result<Vec<SearchHit>> {
             .unwrap_or_default()
             .to_string();
         let modified_at = field_i64(&doc, fields.mtime);
+        let size = field_u64(&doc, fields.size);
 
         hits.push(SearchHit {
             path,
             name,
             score,
             modified_at,
+            size,
         });
     }
 
@@ -168,6 +171,10 @@ fn field_text(doc: &TantivyDocument, field: Field) -> Option<&str> {
 
 fn field_i64(doc: &TantivyDocument, field: Field) -> Option<i64> {
     doc.get_first(field).and_then(|value| value.as_i64())
+}
+
+fn field_u64(doc: &TantivyDocument, field: Field) -> Option<u64> {
+    doc.get_first(field).and_then(|value| value.as_u64())
 }
 
 #[cfg(test)]

@@ -2,6 +2,7 @@ use crate::scanner::FileMeta;
 use crate::schema::build_schema;
 use anyhow::{anyhow, Context, Result};
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock};
@@ -10,7 +11,7 @@ use tantivy::directory::MmapDirectory;
 use tantivy::merge_policy::LogMergePolicy;
 use tantivy::query::TermQuery;
 use tantivy::schema::{Field, IndexRecordOption, Schema, TantivyDocument, Value};
-use tantivy::{Index, IndexReader, IndexWriter, Term};
+use tantivy::{DocAddress, Index, IndexReader, IndexWriter, Term};
 
 const DEFAULT_WRITER_MEM_BYTES: usize = 384 * 1024 * 1024;
 const DEFAULT_WRITER_THREADS: usize = 0; // will be replaced with num_cpus at runtime
@@ -49,6 +50,27 @@ pub(crate) struct IndexFields {
     pub inode: Field,
     pub dev: Field,
     pub content: Field,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexedDocument {
+    pub path: String,
+    pub mtime: i64,
+    pub size: u64,
+}
+
+impl IndexedDocument {
+    pub fn from_meta(meta: &FileMeta) -> Self {
+        Self {
+            path: meta.path.clone(),
+            mtime: meta.modified_at,
+            size: meta.size,
+        }
+    }
+
+    pub fn matches_meta(&self, meta: &FileMeta) -> bool {
+        self.mtime == meta.modified_at && self.size == meta.size && self.path == meta.path
+    }
 }
 
 struct IndexHandle {
@@ -126,16 +148,13 @@ pub fn add_or_update_file(
     force_reindex: bool,
 ) -> Result<IndexUpdate> {
     let handle = index_handle()?;
-    let identity = file_identity(&meta);
+    let identity = meta.identity();
 
     let mut update = IndexUpdate::Added;
 
-    if !force_reindex && meta.inode != 0 {
+    if !force_reindex {
         if let Some(existing) = find_existing(&handle, &identity)? {
-            if existing.mtime == meta.modified_at
-                && existing.size == meta.size
-                && existing.path == meta.path
-            {
+            if existing.matches_meta(&meta) {
                 return Ok(IndexUpdate::Skipped);
             }
             update = IndexUpdate::Updated;
@@ -187,6 +206,11 @@ pub fn commit() -> Result<()> {
     Ok(())
 }
 
+pub fn close() {
+    let mut guard = INDEX_STATE.write().unwrap();
+    *guard = None;
+}
+
 fn index_handle() -> Result<Arc<IndexHandle>> {
     INDEX_STATE
         .read()
@@ -213,21 +237,30 @@ pub(crate) fn fields() -> Result<IndexFields> {
     Ok(index_handle()?.fields.clone())
 }
 
-struct ExistingDoc {
-    path: String,
-    mtime: i64,
-    size: u64,
+fn extract_indexed_document(
+    doc: &TantivyDocument,
+    fields: &IndexFields,
+) -> Result<IndexedDocument> {
+    let path = doc
+        .get_first(fields.path)
+        .and_then(|value| value.as_str())
+        .ok_or_else(|| anyhow!("existing document missing path"))?
+        .to_string();
+
+    let mtime = doc
+        .get_first(fields.mtime)
+        .and_then(|value| value.as_i64())
+        .ok_or_else(|| anyhow!("existing document missing mtime"))?;
+
+    let size = doc
+        .get_first(fields.size)
+        .and_then(|value| value.as_u64())
+        .ok_or_else(|| anyhow!("existing document missing size"))?;
+
+    Ok(IndexedDocument { path, mtime, size })
 }
 
-fn file_identity(meta: &FileMeta) -> String {
-    if meta.inode != 0 || meta.dev != 0 {
-        format!("{}:{}", meta.dev, meta.inode)
-    } else {
-        format!("path:{}", meta.path)
-    }
-}
-
-fn find_existing(handle: &IndexHandle, identity: &str) -> Result<Option<ExistingDoc>> {
+fn find_existing(handle: &IndexHandle, identity: &str) -> Result<Option<IndexedDocument>> {
     let searcher = handle.reader.searcher();
     let term = Term::from_field_text(handle.fields.identity, identity);
     let query = TermQuery::new(term, IndexRecordOption::Basic);
@@ -243,23 +276,40 @@ fn find_existing(handle: &IndexHandle, identity: &str) -> Result<Option<Existing
         .doc(address)
         .context("failed to fetch existing doc")?;
 
-    let path = doc
-        .get_first(handle.fields.path)
-        .and_then(|value| value.as_str())
-        .ok_or_else(|| anyhow!("existing document missing path"))?
-        .to_string();
+    let existing = extract_indexed_document(&doc, &handle.fields)?;
+    Ok(Some(existing))
+}
 
-    let mtime = doc
-        .get_first(handle.fields.mtime)
-        .and_then(|value| value.as_i64())
-        .ok_or_else(|| anyhow!("existing document missing mtime"))?;
+pub fn load_index_state() -> Result<HashMap<String, IndexedDocument>> {
+    let handle = index_handle()?;
+    let searcher = handle.reader.searcher();
+    let mut state = HashMap::new();
 
-    let size = doc
-        .get_first(handle.fields.size)
-        .and_then(|value| value.as_u64())
-        .ok_or_else(|| anyhow!("existing document missing size"))?;
+    for (segment_ord, segment_reader) in searcher.segment_readers().iter().enumerate() {
+        for doc_id in segment_reader.doc_ids_alive() {
+            let address = DocAddress {
+                segment_ord: segment_ord as u32,
+                doc_id,
+            };
+            let doc: TantivyDocument = searcher.doc(address).with_context(|| {
+                format!(
+                    "failed to fetch existing doc for segment {} doc {}",
+                    segment_ord, doc_id
+                )
+            })?;
 
-    Ok(Some(ExistingDoc { path, mtime, size }))
+            let identity = doc
+                .get_first(handle.fields.identity)
+                .and_then(|value| value.as_str())
+                .ok_or_else(|| anyhow!("indexed document missing identity"))?
+                .to_string();
+
+            let metadata = extract_indexed_document(&doc, &handle.fields)?;
+            state.insert(identity, metadata);
+        }
+    }
+
+    Ok(state)
 }
 
 fn current_settings() -> IndexSettings {
