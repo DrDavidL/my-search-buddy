@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust tests
+        run: cargo test -p finder-core
+
+      - name: Build Mac app (placeholder)
+        working-directory: mac-app
+        run: |
+          if [ -d "MacApp.xcodeproj" ]; then
+            xcodebuild -scheme MacApp -configuration Debug -destination 'platform=macOS' -quiet
+          else
+            echo "Skipping xcodebuild until the SwiftUI project lands."
+          fi
