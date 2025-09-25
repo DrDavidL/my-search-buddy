@@ -3,13 +3,17 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 55;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		1A3B3F201BE9D4F200C5A7C5 /* MySearchBuddyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A3B3F191BE9D4F200C5A7C5 /* MySearchBuddyApp.swift */; };
 		1A3B3F211BE9D4F200C5A7C5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A3B3F1A1BE9D4F200C5A7C5 /* ContentView.swift */; };
 		1A3B3F221BE9D4F200C5A7C5 /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A3B3F1B1BE9D4F200C5A7C5 /* BookmarkStore.swift */; };
+		1AC5F0011C23456700ABCDEF /* IndexViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0001C23456700ABCDEF /* IndexViewModel.swift */; };
+		1AC5F0021C23456800ABCDEF /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */; };
+		1AC5F0041C23456800ABCDEF /* ResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0051C23456800ABCDEF /* ResultRow.swift */; };
+		1AC5F0061C23456800ABCDEF /* QuickLookHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */; };
 		1A3B3F281BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */; };
 		1A3B3F2C1BE9D4F200C5A7C5 /* FinderCoreFFI in Frameworks */ = {isa = PBXBuildFile; productRef = 1A3B3F2B1BE9D4F200C5A7C5 /* FinderCoreFFI */; };
 /* End PBXBuildFile section */
@@ -19,11 +23,12 @@
 		1A3B3F191BE9D4F200C5A7C5 /* MySearchBuddyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MySearchBuddyApp.swift; sourceTree = "<group>"; };
 		1A3B3F1A1BE9D4F200C5A7C5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1A3B3F1B1BE9D4F200C5A7C5 /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkStore.swift; sourceTree = "<group>"; };
+		1AC5F0001C23456700ABCDEF /* IndexViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexViewModel.swift; sourceTree = "<group>"; };
+		1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		1AC5F0051C23456800ABCDEF /* ResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultRow.swift; sourceTree = "<group>"; };
+		1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookHelper.swift; sourceTree = "<group>"; };
 		1A3B3F1C1BE9D4F200C5A7C5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1A3B3F1D1BE9D4F200C5A7C5 /* MySearchBuddy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MySearchBuddy.entitlements; sourceTree = "<group>"; };
-		1A3B3F261BE9D4F200C5A7C5 /* Resources */ = {isa = PBXGroup; children = (
-			1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */,
-		); name = Resources; path = Resources; sourceTree = SOURCE_ROOT; };
 		1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -61,12 +66,24 @@
 			children = (
 				1A3B3F191BE9D4F200C5A7C5 /* MySearchBuddyApp.swift */,
 				1A3B3F1A1BE9D4F200C5A7C5 /* ContentView.swift */,
+				1AC5F0001C23456700ABCDEF /* IndexViewModel.swift */,
+				1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */,
+				1AC5F0051C23456800ABCDEF /* ResultRow.swift */,
+				1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */,
 				1A3B3F1B1BE9D4F200C5A7C5 /* BookmarkStore.swift */,
 				1A3B3F1C1BE9D4F200C5A7C5 /* Info.plist */,
 				1A3B3F1D1BE9D4F200C5A7C5 /* MySearchBuddy.entitlements */,
 			);
 			path = MySearchBuddy;
 			sourceTree = "<group>";
+		};
+		1A3B3F261BE9D4F200C5A7C5 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
+			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */
 
@@ -111,7 +128,7 @@
 			);
 			mainGroup = 1A3B3F0C1BE9D4F200C5A7C5;
 			packageReferences = (
-				1A3B3F2D1BE9D4F200C5A7C5 /* XCLocalSwiftPackageReference "FinderCoreFFI" */,
+				1A3B3F2D1BE9D4F200C5A7C5 /* XCLocalSwiftPackageReference "Packages/FinderCoreFFI" */,
 			);
 			productRefGroup = 1A3B3F161BE9D4F200C5A7C5 /* Products */;
 			projectDirPath = "";
@@ -136,13 +153,15 @@
 /* Begin PBXSourcesBuildPhase section */
 		1A3B3F111BE9D4F200C5A7C5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
+				1AC5F0061C23456800ABCDEF /* QuickLookHelper.swift in Sources */,
 				1A3B3F201BE9D4F200C5A7C5 /* MySearchBuddyApp.swift in Sources */,
 				1A3B3F211BE9D4F200C5A7C5 /* ContentView.swift in Sources */,
+				1AC5F0041C23456800ABCDEF /* ResultRow.swift in Sources */,
+				1AC5F0021C23456800ABCDEF /* SearchViewModel.swift in Sources */,
+				1AC5F0011C23456700ABCDEF /* IndexViewModel.swift in Sources */,
 				1A3B3F221BE9D4F200C5A7C5 /* BookmarkStore.swift in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
@@ -194,6 +213,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				"LIBRARY_SEARCH_PATHS[arch=*]" = "$(PROJECT_DIR)/../target/debug";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				ONLY_ACTIVE_ARCH = YES;
@@ -246,7 +266,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=*]" = "$(PROJECT_DIR)/../target/release";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -266,15 +290,18 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MySearchBuddy/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.mysearchbuddy.mac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.9;
-				SUPPORTS_MACCATALYST = NO;
 			};
 			name = Debug;
 		};
@@ -288,15 +315,18 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MySearchBuddy/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.mysearchbuddy.mac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.9;
-				SUPPORTS_MACCATALYST = NO;
 			};
 			name = Release;
 		};
@@ -324,16 +354,18 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		1A3B3F2D1BE9D4F200C5A7C5 /* XCLocalSwiftPackageReference "FinderCoreFFI" */ = {
+		1A3B3F2D1BE9D4F200C5A7C5 /* XCLocalSwiftPackageReference "Packages/FinderCoreFFI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/FinderCoreFFI;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		1A3B3F2B1BE9D4F200C5A7C5 /* FinderCoreFFI */ = {isa = XCSwiftPackageProductDependency; productName = FinderCoreFFI; };
+		1A3B3F2B1BE9D4F200C5A7C5 /* FinderCoreFFI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FinderCoreFFI;
+		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = 1A3B3F0D1BE9D4F200C5A7C5 /* Project object */;
 }
