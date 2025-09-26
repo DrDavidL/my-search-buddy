@@ -3,7 +3,7 @@ import FinderCoreFFI
 
 struct ContentView: View {
     @EnvironmentObject private var bookmarkStore: BookmarkStore
-    @StateObject private var indexViewModel = IndexViewModel()
+    @StateObject private var indexCoordinator = IndexCoordinator()
     @StateObject private var searchViewModel = SearchViewModel()
 
     @FocusState private var searchFieldIsFocused: Bool
@@ -78,11 +78,11 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Button("Add Location…", action: showPicker)
-                Button(indexViewModel.isIndexing ? "Cancel" : "Index Now", action: toggleIndexing)
+                Button(indexCoordinator.isIndexing ? "Cancel" : "Index Now", action: toggleIndexing)
                     .disabled(bookmarkStore.urls.isEmpty)
                 Spacer()
             }
-            Text(indexViewModel.status)
+            Text(indexCoordinator.status)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -184,10 +184,10 @@ struct ContentView: View {
     }
 
     private func toggleIndexing() {
-        if indexViewModel.isIndexing {
-            indexViewModel.cancel()
+        if indexCoordinator.isIndexing {
+            indexCoordinator.cancel()
         } else {
-            indexViewModel.startIndexing(roots: bookmarkStore.urls)
+            indexCoordinator.startIndexing(roots: bookmarkStore.urls)
         }
     }
 

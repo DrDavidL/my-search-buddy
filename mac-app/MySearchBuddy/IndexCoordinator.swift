@@ -33,9 +33,10 @@ final class IndexCoordinator: ObservableObject {
         status = "Preparing…"
         filesIndexed = 0
 
+        FinderCore.close()
         FinderCore.initIndex(at: indexDirectory.path)
 
-        task = Task.detached(priority: .userInitiated) { [weak self] in
+        task = Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
             let startTime = Date()
 
