@@ -95,7 +95,7 @@ final class IndexCoordinator: ObservableObject {
             }
 
             let size = Int64(values.fileSize ?? 0)
-            if size <= 0 || size > 1_572_864 { continue }
+            if size <= 0 { continue }
 
             let modificationDate = values.contentModificationDate ?? Date()
             let meta = FinderCore.FileMeta(
@@ -108,7 +108,9 @@ final class IndexCoordinator: ObservableObject {
                 dev: 0
             )
 
-            if FinderCore.addOrUpdate(meta: meta, content: nil) {
+            let content = loadContentIfPossible(from: url, size: size)
+
+            if FinderCore.addOrUpdate(meta: meta, content: content) {
                 processed += 1
                 let runningTotal = totalProcessed + processed
                 if processed % 50 == 0 {
@@ -144,5 +146,21 @@ final class IndexCoordinator: ObservableObject {
         filesIndexed = 0
         status = "Index reset"
         lastIndexDate = nil
+    }
+
+    private func loadContentIfPossible(from url: URL, size: Int64) -> String? {
+        let maxBytes: Int64 = 1_572_864
+        guard size <= maxBytes else { return nil }
+        do {
+            let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+            if data.contains(0) { return nil }
+            if let text = String(data: data, encoding: .utf8) {
+                return text
+            }
+            return String(decoding: data, as: UTF8.self)
+        } catch {
+            NSLog("[Index] Failed to read content for %@: %@", url.path, error.localizedDescription)
+            return nil
+        }
     }
 }
