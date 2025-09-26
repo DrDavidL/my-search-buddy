@@ -33,8 +33,9 @@ final class SearchViewModel: ObservableObject {
 
     private func performSearch(term: String, scope: FinderCore.Scope) async {
         isSearching = true
+        let currentSort = sort
         let hits = await Task.detached(priority: .userInitiated) {
-            FinderCore.search(term, scope: scope, limit: 200, sortByModifiedDescending: sort == .modified)
+            FinderCore.search(term, scope: scope, limit: 200, sortByModifiedDescending: currentSort == .modified)
         }.value
         guard !Task.isCancelled else { return }
         results = hits

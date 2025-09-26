@@ -1,8 +1,9 @@
 import Foundation
 import FinderCoreFFI
+import SwiftUI
 
 @MainActor
-final class IndexViewModel: ObservableObject {
+final class IndexCoordinator: ObservableObject {
     @Published var isIndexing = false
     @Published var status: String = "Idle"
     @Published var filesIndexed: Int = 0
@@ -11,7 +12,7 @@ final class IndexViewModel: ObservableObject {
     private let indexDirectory: URL
 
     init() {
-        indexDirectory = IndexViewModel.defaultIndexDirectory()
+        indexDirectory = IndexCoordinator.defaultIndexDirectory()
         ensureIndexDirectoryExists()
         FinderCore.initIndex(at: indexDirectory.path)
     }
@@ -22,9 +23,7 @@ final class IndexViewModel: ObservableObject {
         return base.appendingPathComponent("MySearchBuddy/Index", isDirectory: true)
     }
 
-    var indexDirectoryURL: URL {
-        indexDirectory
-    }
+    var indexDirectoryURL: URL { indexDirectory }
 
     func startIndexing(roots: [URL]) {
         guard !roots.isEmpty else { return }
@@ -39,15 +38,12 @@ final class IndexViewModel: ObservableObject {
         task = Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             let startTime = Date()
+
             var totalProcessed = 0
-
             for root in roots {
-                if Task.isCancelled {
-                    break
-                }
-
-                let count = await self.indexRoot(root, base: totalProcessed)
-                totalProcessed += count
+                if Task.isCancelled { break }
+                let processed = await self.indexRoot(root, startingFrom: totalProcessed)
+                totalProcessed += processed
             }
 
             await MainActor.run {
@@ -76,11 +72,9 @@ final class IndexViewModel: ObservableObject {
         try? fm.createDirectory(at: indexDirectory, withIntermediateDirectories: true)
     }
 
-    private func indexRoot(_ root: URL, base: Int) async -> Int {
+    private func indexRoot(_ root: URL, startingFrom totalProcessed: Int) async -> Int {
         var processed = 0
-        guard root.startAccessingSecurityScopedResource() else {
-            return 0
-        }
+        guard root.startAccessingSecurityScopedResource() else { return 0 }
         defer { root.stopAccessingSecurityScopedResource() }
 
         let fm = FileManager.default
@@ -91,9 +85,7 @@ final class IndexViewModel: ObservableObject {
 
         var lastCommit = Date()
         for case let url as URL in enumerator {
-            if Task.isCancelled {
-                break
-            }
+            if Task.isCancelled { break }
 
             guard let values = try? url.resourceValues(forKeys: keys), values.isDirectory != true else {
                 continue
@@ -115,8 +107,8 @@ final class IndexViewModel: ObservableObject {
 
             if FinderCore.addOrUpdate(meta: meta, content: nil) {
                 processed += 1
+                let runningTotal = totalProcessed + processed
                 if processed % 50 == 0 {
-                    let runningTotal = base + processed
                     await MainActor.run {
                         self.filesIndexed = runningTotal
                         self.status = "Indexed \(runningTotal) files…"
@@ -132,7 +124,7 @@ final class IndexViewModel: ObservableObject {
         }
 
         FinderCore.commitAndRefresh()
-        let finalTotal = base + processed
+        let finalTotal = totalProcessed + processed
         await MainActor.run {
             self.filesIndexed = finalTotal
             self.status = "Indexed \(finalTotal) files…"
