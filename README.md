@@ -3,14 +3,20 @@
 Early-stage workspace for the macOS search companion app. The repo hosts:
 
 - `finder-core`: Rust library that handles scanning, indexing, and searching.
-- `mac-app`: SwiftUI macOS application that will embed the Rust core.
+- `mac-app`: SwiftUI macOS application that sits on top of the Rust core.
 - `scripts`: Helper scripts for builds, tests, and automation.
 
 ## Getting Started
 
 1. Install the Rust toolchain (nightly not required) and Xcode 15 or newer.
-2. Run `cargo test -p finder-core` to exercise the Rust unit suite once it exists.
-3. Use `xcodebuild -scheme MacApp -configuration Debug` to build the SwiftUI app once the project scaffolding lands.
+2. Build finder-core:
+   ```bash
+   cargo build -p finder-core
+   cargo build -p finder-core --release
+   ```
+   Both debug and release dylibs will land in `target/` and are referenced by the app.
+3. Open `mac-app/MySearchBuddy.xcodeproj`, select the **MySearchBuddy** scheme, and build/run. (You can also use `xcodebuild -scheme MySearchBuddy -configuration Debug`.)
+4. Tests: `cargo test -p finder-core` (Rust) and `swift test` inside `mac-app/Packages/FinderCoreFFI` once the dylib is built.
 
 ## Privacy at a glance
 
@@ -39,11 +45,24 @@ Early-stage workspace for the macOS search companion app. The repo hosts:
 - [serde](https://crates.io/crates/serde) – MIT OR Apache-2.0
 - [anyhow](https://crates.io/crates/anyhow) – MIT OR Apache-2.0
 
+## mac-app UI Highlights
+
+- **Two-pane layout:** folders/filters on the left, results on the right.
+- **Quick filters:** one-click buttons for DOC/DOCX, PPT/PPTX, PDF, and XLS/XLSX.
+- **Location filters:** checkboxes per indexed folder with “All” and “None” shortcuts; only enabled locations are searched.
+- **Search controls:** explicit Search & Clear buttons, scope toggle (Name/Content/Both), and sort toggle (Score/Modified).
+- **Actions:** Open in Finder, Quick Look (sandbox-safe controller), and Reset Index.
+- **Status:** shows last index time and status message beneath the indexing controls.
+
 ## Status
 
-v0.1 planning is underway. Expect rapid iteration and breaking changes while the MVP core loop is assembled.
+v0.2 is in flight. Expect rapid iteration and breaking changes while the MVP core loop is assembled.
 
 ## FFI Header
 
-- `finder-core/include/finder_core.h` is committed for the Swift bridge. Regenerate it with `cbindgen --config finder-core/cbindgen.toml --crate finder-core --output finder-core/include/finder_core.h` when FFI structs or functions change.
+- `finder-core/include/finder_core.h` is committed for the Swift bridge. Regenerate it with:
+  ```bash
+  cbindgen --config finder-core/cbindgen.toml --crate finder-core --output finder-core/include/finder_core.h
+  ```
 - Build the dynamic library for Swift with `cargo build -p finder-core` (debug) or `cargo build -p finder-core --release` and point `FINDER_CORE_DYLIB` at the resulting `.dylib` before running Swift tests.
+

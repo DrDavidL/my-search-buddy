@@ -1,11 +1,12 @@
 import AppKit
 import QuickLookUI
 
-private final class QuickLookController: NSObject, QLPreviewPanelDelegate, QLPreviewPanelDataSource {
-    static let shared = QuickLookController()
+private final class QuickLookCoordinator: NSResponder, QLPreviewPanelDelegate, QLPreviewPanelDataSource {
+    static let shared = QuickLookCoordinator()
 
     private var items: [URL] = []
     private var scopedAccess: [URL: Bool] = [:]
+    private weak var previousResponder: NSResponder?
 
     func present(paths: [String]) {
         releaseScopedAccess()
@@ -19,21 +20,30 @@ private final class QuickLookController: NSObject, QLPreviewPanelDelegate, QLPre
             return url
         }
 
-        guard let panel = QLPreviewPanel.shared() else { return }
-        panel.delegate = self
-        panel.dataSource = self
+        guard let panel = QLPreviewPanel.shared(), let window = NSApp.keyWindow else { return }
+
+        previousResponder = window.nextResponder
+        window.nextResponder = self
         panel.makeKeyAndOrderFront(nil)
     }
 
     override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
 
-    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {}
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.delegate = self
+        panel.dataSource = self
+        panel.reloadData()
+    }
 
     override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
         releaseScopedAccess()
         items.removeAll()
         panel.delegate = nil
         panel.dataSource = nil
+        if let window = NSApp.keyWindow, window.nextResponder === self {
+            window.nextResponder = previousResponder
+        }
+        previousResponder = nil
     }
 
     func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
@@ -53,11 +63,11 @@ private final class QuickLookController: NSObject, QLPreviewPanelDelegate, QLPre
 }
 
 func quickLook(path: String) {
-    QuickLookController.shared.present(paths: [path])
+    QuickLookCoordinator.shared.present(paths: [path])
 }
 
 func quickLook(paths: [String]) {
-    QuickLookController.shared.present(paths: paths)
+    QuickLookCoordinator.shared.present(paths: paths)
 }
 
 func revealInFinder(path: String) {
