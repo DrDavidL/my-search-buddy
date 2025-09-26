@@ -11,9 +11,9 @@ final class SearchViewModel: ObservableObject {
 
     private var searchTask: Task<Void, Never>?
 
-    func runSearch() {
+    func runSearch(using filterQuery: String? = nil) {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
+        if trimmed.isEmpty, filterQuery == nil {
             results = []
             return
         }
@@ -21,7 +21,8 @@ final class SearchViewModel: ObservableObject {
         searchTask?.cancel()
         searchTask = Task { [weak self] in
             guard let self else { return }
-            await self.performSearch(term: trimmed, scope: self.scope)
+            let term = [trimmed, filterQuery].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " AND ")
+            await self.performSearch(term: term, scope: self.scope)
         }
     }
 

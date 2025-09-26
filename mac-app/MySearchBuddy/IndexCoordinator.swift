@@ -7,6 +7,7 @@ final class IndexCoordinator: ObservableObject {
     @Published var isIndexing = false
     @Published var status: String = "Idle"
     @Published var filesIndexed: Int = 0
+    @Published var lastIndexDate: Date?
 
     private var task: Task<Void, Never>?
     private let indexDirectory: URL
@@ -54,6 +55,7 @@ final class IndexCoordinator: ObservableObject {
                 } else {
                     let elapsed = Date().timeIntervalSince(startTime)
                     self.status = String(format: "Indexed %d files (%.1fs)", totalProcessed, elapsed)
+                    self.lastIndexDate = Date()
                 }
                 self.filesIndexed = totalProcessed
             }
@@ -131,5 +133,16 @@ final class IndexCoordinator: ObservableObject {
             self.status = "Indexed \(finalTotal) files…"
         }
         return processed
+    }
+
+    func resetIndex() {
+        cancel()
+        FinderCore.close()
+        try? FileManager.default.removeItem(at: indexDirectory)
+        ensureIndexDirectoryExists()
+        FinderCore.initIndex(at: indexDirectory.path)
+        filesIndexed = 0
+        status = "Index reset"
+        lastIndexDate = nil
     }
 }

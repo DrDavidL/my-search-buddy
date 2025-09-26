@@ -3,6 +3,16 @@ import AppKit
 import os.log
 
 final class BookmarkStore: ObservableObject {
+    struct Bookmark: Identifiable, Hashable {
+        let id: UUID
+        let url: URL
+        var isEnabled: Bool
+    }
+
+    @Published var bookmarks: [Bookmark] = []
+    var enabledURLs: [URL] {
+        bookmarks.filter { $0.isEnabled }.map { $0.url }
+    }
     @Published var urls: [URL] = []
     private let key = "bookmarks.v1"
 
@@ -32,7 +42,7 @@ final class BookmarkStore: ObservableObject {
 
     private func load() {
         let datas = (UserDefaults.standard.array(forKey: key) as? [Data]) ?? []
-        urls = datas.compactMap { data in
+        let resolved = datas.compactMap { data -> URL? in
             var isStale = false
             guard let url = try? URL(resolvingBookmarkData: data,
                                      options: [.withSecurityScope],
@@ -42,6 +52,10 @@ final class BookmarkStore: ObservableObject {
                 return nil
             }
             return url
+        }
+        urls = resolved
+        bookmarks = resolved.map { url in
+            Bookmark(id: UUID(), url: url, isEnabled: true)
         }
     }
 }

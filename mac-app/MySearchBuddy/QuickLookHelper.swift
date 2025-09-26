@@ -25,11 +25,11 @@ private final class QuickLookController: NSObject, QLPreviewPanelDelegate, QLPre
         panel.makeKeyAndOrderFront(nil)
     }
 
-    func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
 
-    func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {}
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {}
 
-    func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
         releaseScopedAccess()
         items.removeAll()
         panel.delegate = nil
