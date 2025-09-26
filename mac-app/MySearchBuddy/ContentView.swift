@@ -8,42 +8,43 @@ struct ContentView: View {
 
     @FocusState private var searchFieldIsFocused: Bool
     @State private var selectedResultPath: String?
-    @State private var openSelection: FinderCore.Hit?
     @State private var sortBy = SortOption.score
 
     var body: some View {
         HStack(spacing: 24) {
-            VStack(alignment: .leading, spacing: 16) {
-                headerSection
-                locationListSection
-                indexingControlsSection
-                Divider()
-                locationFiltersSection
-                Divider()
-                quickFiltersSection
-                Spacer()
-            }
-            .frame(width: 380)
-
+            leftPane
             Divider()
-
-            VStack(alignment: .leading, spacing: 16) {
-                searchControlsSection
-                resultsListSection
-                actionButtons
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            rightPane
         }
         .padding(24)
         .frame(minWidth: 900, minHeight: 560)
         .onAppear { searchFieldIsFocused = true }
         .onChange(of: searchViewModelResults) { hits in
-            if let first = hits.first {
-                selectedResultPath = first.path
-            } else {
-                selectedResultPath = nil
-            }
+            selectedResultPath = hits.first?.path
         }
+    }
+
+    private var leftPane: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            headerSection
+            locationListSection
+            indexingControlsSection
+            Divider()
+            locationFiltersSection
+            Divider()
+            quickFiltersSection
+            Spacer()
+        }
+        .frame(width: 380)
+    }
+
+    private var rightPane: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            searchControlsSection
+            resultsListSection
+            actionButtons
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var headerSection: some View {
@@ -54,7 +55,7 @@ struct ContentView: View {
 
     private var locationListSection: some View {
         Group {
-            if bookmarkStore.urls.isEmpty {
+            if bookmarkStore.bookmarks.isEmpty {
                 Text("Add a folder to begin indexing.")
                     .foregroundStyle(.secondary)
             } else {
@@ -67,12 +68,9 @@ struct ContentView: View {
                                 .truncationMode(.head)
                                 .textSelection(.enabled)
                             Spacer()
-                            Toggle("", isOn: bindingForBookmark(at: index))
-                                .labelsHidden()
-                                .toggleStyle(.switch)
-                            Spacer()
                             Button {
                                 bookmarkStore.remove(at: IndexSet(integer: index))
+                                runFilteredSearch()
                             } label: {
                                 Image(systemName: "trash")
                             }
@@ -82,6 +80,7 @@ struct ContentView: View {
                         .contextMenu {
                             Button("Remove", role: .destructive) {
                                 bookmarkStore.remove(at: IndexSet(integer: index))
+                                runFilteredSearch()
                             }
                         }
                     }
@@ -96,12 +95,48 @@ struct ContentView: View {
             HStack {
                 Button("Add Location…", action: showPicker)
                 Button(indexCoordinator.isIndexing ? "Cancel" : "Index Now", action: toggleIndexing)
-                    .disabled(bookmarkStore.urls.isEmpty)
+                    .disabled(bookmarkStore.bookmarks.isEmpty)
+                Button("Reset Index") { indexCoordinator.resetIndex() }
                 Spacer()
             }
             Text(statusSummary)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    private var locationFiltersSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Locations")
+                    .font(.headline)
+                Spacer()
+                Button("All") {
+                    bookmarkStore.bookmarks = bookmarkStore.bookmarks.map { var b = $0; b.isEnabled = true; return b }
+                    runFilteredSearch()
+                }
+                Button("None") {
+                    bookmarkStore.bookmarks = bookmarkStore.bookmarks.map { var b = $0; b.isEnabled = false; return b }
+                    runFilteredSearch()
+                }
+            }
+            ForEach(Array(bookmarkStore.bookmarks.enumerated()), id: \.offset) { index, bookmark in
+                Toggle(bookmark.url.lastPathComponent, isOn: bindingForBookmark(at: index))
+            }
+        }
+    }
+
+    private var quickFiltersSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Quick Filters")
+                .font(.headline)
+            HStack {
+                quickFilterButton(title: "DOC", query: "ext:doc OR ext:docx")
+                quickFilterButton(title: "PPT", query: "ext:ppt OR ext:pptx")
+                quickFilterButton(title: "PDF", query: "ext:pdf")
+                quickFilterButton(title: "XLS", query: "ext:xls OR ext:xlsx")
+                Spacer()
+            }
         }
     }
 
@@ -111,8 +146,8 @@ struct ContentView: View {
                 TextField("Search…", text: $searchViewModel.query)
                     .textFieldStyle(.roundedBorder)
                     .focused($searchFieldIsFocused)
-                    .onSubmit { searchViewModel.runSearch() }
-                Button("Search") { searchViewModel.runSearch() }
+                    .onSubmit { runFilteredSearch() }
+                Button("Search") { runFilteredSearch() }
                 Button("Clear") { searchViewModel.clear() }
                     .disabled(searchViewModel.query.isEmpty)
             }
@@ -124,7 +159,7 @@ struct ContentView: View {
             }
             .pickerStyle(.segmented)
             .onChange(of: searchViewModel.scope) { _ in
-                searchViewModel.runSearch()
+                runFilteredSearch()
             }
 
             Picker("Sort", selection: $sortBy) {
@@ -132,9 +167,9 @@ struct ContentView: View {
                 Text("Modified").tag(SortOption.modified)
             }
             .pickerStyle(.segmented)
-            .onChange(of: sortBy) { _ in
-                searchViewModel.sort = sortBy
-                searchViewModel.runSearch()
+            .onChange(of: sortBy) { newValue in
+                searchViewModel.sort = newValue
+                runFilteredSearch()
             }
 
             HStack(spacing: 8) {
@@ -142,8 +177,7 @@ struct ContentView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 if searchViewModel.isSearching {
-                    ProgressView()
-                        .controlSize(.small)
+                    ProgressView().controlSize(.small)
                 }
                 Spacer()
             }
@@ -156,13 +190,11 @@ struct ContentView: View {
                 ResultRow(hit: hit)
                     .contentShape(Rectangle())
                     .onTapGesture { selectedResultPath = hit.path }
-                    .onTapGesture(count: 2) {
-                        revealInFinder(path: hit.path)
-                    }
+                    .onTapGesture(count: 2) { revealInFinder(path: hit.path) }
             }
         }
         .listStyle(.inset)
-        .frame(minHeight: 240)
+        .frame(minHeight: 280)
     }
 
     private var actionButtons: some View {
@@ -175,9 +207,7 @@ struct ContentView: View {
         }
     }
 
-    private var searchViewModelResults: [FinderCore.Hit] {
-        searchViewModel.results
-    }
+    private var searchViewModelResults: [FinderCore.Hit] { searchViewModel.results }
 
     private var selectedHit: FinderCore.Hit? {
         guard let selectedResultPath else { return nil }
@@ -194,6 +224,7 @@ struct ContentView: View {
         pickFolder { url in
             do {
                 try bookmarkStore.add(url: url)
+                runFilteredSearch()
             } catch {
                 NSLog("Failed to save bookmark: %{public}@", error.localizedDescription)
             }
@@ -208,23 +239,10 @@ struct ContentView: View {
         }
     }
 
-    private var quickFiltersSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Quick Filters")
-                .font(.headline)
-            HStack {
-                quickFilterButton(title: "DOC", query: "ext:doc OR ext:docx")
-                quickFilterButton(title: "PPT", query: "ext:ppt OR ext:pptx")
-                quickFilterButton(title: "PDF", query: "ext:pdf")
-                Spacer()
-            }
-        }
-    }
-
     private func quickFilterButton(title: String, query: String) -> some View {
         Button(title) {
             searchViewModel.query = query
-            searchViewModel.runSearch()
+            runFilteredSearch()
         }
         .buttonStyle(.bordered)
         .controlSize(.small)
@@ -245,18 +263,18 @@ struct ContentView: View {
             get: { bookmarkStore.bookmarks[index].isEnabled },
             set: { newValue in
                 bookmarkStore.bookmarks[index].isEnabled = newValue
+                runFilteredSearch()
             }
         )
     }
 
-    private func runFilteredSearch() {
+   private func runFilteredSearch() {
         let enabledPaths = bookmarkStore.bookmarks.filter { $0.isEnabled }.map { $0.url.path }
-        if enabledPaths.isEmpty {
-            searchViewModel.runSearch(using: "")
+        searchViewModel.activeRootPaths = enabledPaths
+        if searchViewModel.query.isEmpty {
+            searchViewModel.clear()
         } else {
-            let clauses = enabledPaths.map { "path:\($0)/*" }
-            let filterQuery = clauses.joined(separator: " OR ")
-            searchViewModel.runSearch(using: filterQuery)
+            searchViewModel.runSearch()
         }
     }
 
@@ -274,30 +292,3 @@ struct ContentView: View {
     ContentView()
         .environmentObject(BookmarkStore())
 }
-    private var locationFiltersSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Locations")
-                    .font(.headline)
-                Spacer()
-                Button("All") {
-                    bookmarkStore.bookmarks = bookmarkStore.bookmarks.map { b in
-                        var b = b; b.isEnabled = true; return b
-                    }
-                    runFilteredSearch()
-                }
-                Button("None") {
-                    bookmarkStore.bookmarks = bookmarkStore.bookmarks.map { b in
-                        var b = b; b.isEnabled = false; return b
-                    }
-                    runFilteredSearch()
-                }
-            }
-            ForEach(Array(bookmarkStore.bookmarks.enumerated()), id: \.offset) { index, bookmark in
-                Toggle(bookmark.url.lastPathComponent, isOn: bindingForBookmark(at: index))
-                    .onChange(of: bookmarkStore.bookmarks[index].isEnabled) { _ in
-                        runFilteredSearch()
-                    }
-            }
-        }
-    }

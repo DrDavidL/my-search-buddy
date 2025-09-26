@@ -7,13 +7,15 @@ final class SearchViewModel: ObservableObject {
     @Published var scope: FinderCore.Scope = .both
     @Published private(set) var results: [FinderCore.Hit] = []
     @Published private(set) var isSearching = false
+
     var sort: SortOption = .score
+    var activeRootPaths: [String] = []
 
     private var searchTask: Task<Void, Never>?
 
-    func runSearch(using filterQuery: String? = nil) {
+    func runSearch() {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty, filterQuery == nil {
+        if trimmed.isEmpty {
             results = []
             return
         }
@@ -21,8 +23,7 @@ final class SearchViewModel: ObservableObject {
         searchTask?.cancel()
         searchTask = Task { [weak self] in
             guard let self else { return }
-            let term = [trimmed, filterQuery].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " AND ")
-            await self.performSearch(term: term, scope: self.scope)
+            await self.performSearch(term: trimmed, scope: self.scope)
         }
     }
 
@@ -39,8 +40,16 @@ final class SearchViewModel: ObservableObject {
             FinderCore.search(term, scope: scope, limit: 200, sortByModifiedDescending: currentSort == .modified)
         }.value
         guard !Task.isCancelled else { return }
-        results = hits
+        let filtered = filterHits(hits)
+        results = filtered
         isSearching = false
+    }
+
+    private func filterHits(_ hits: [FinderCore.Hit]) -> [FinderCore.Hit] {
+        guard !activeRootPaths.isEmpty else { return hits }
+        return hits.filter { hit in
+            activeRootPaths.contains { hit.path.hasPrefix($0) }
+        }
     }
 }
 
