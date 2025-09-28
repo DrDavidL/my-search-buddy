@@ -3,6 +3,7 @@ import FinderCoreFFI
 
 struct ResultRow: View {
     let hit: FinderCore.Hit
+    @EnvironmentObject private var indexCoordinator: IndexCoordinator
 
     private let dateFormatter = RelativeDateTimeFormatter()
 
@@ -16,6 +17,12 @@ struct ResultRow: View {
                     .lineLimit(1)
                     .truncationMode(.head)
                     .foregroundStyle(.secondary)
+                if isCloudPlaceholder {
+                    Label("Cloud", systemImage: "icloud.and.arrow.down")
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(Color.orange)
+                        .help("Stored in cloud — download before preview")
+                }
                 Spacer()
                 Text(formatSize(bytes: hit.size))
                     .font(.footnote)
@@ -40,6 +47,10 @@ struct ResultRow: View {
         formatter.countStyle = .file
         return formatter.string(fromByteCount: Int64(bytes))
     }
+
+    private var isCloudPlaceholder: Bool {
+        indexCoordinator.isCloudPlaceholder(path: hit.path)
+    }
 }
 
 #Preview {
@@ -52,5 +63,6 @@ struct ResultRow: View {
             score: 3.14
         )
     )
+    .environmentObject(IndexCoordinator())
     .padding()
 }

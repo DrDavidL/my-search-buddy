@@ -33,12 +33,16 @@ struct ContentView: View {
         .onAppear {
             searchFieldIsFocused = true
             indexCoordinator.applySamplingPolicy(coverageSettings.samplingPolicy)
+            indexCoordinator.requestIncrementalIndexIfNeeded(roots: bookmarkStore.allBookmarkURLs)
         }
         .onChange(of: searchViewModelResults) { hits in
             selectedResultPath = hits.first?.path
         }
         .onChange(of: coverageSettings.samplingPolicy) { policy in
             indexCoordinator.applySamplingPolicy(policy)
+        }
+        .onChange(of: bookmarkStore.bookmarks) { _ in
+            indexCoordinator.requestIncrementalIndexIfNeeded(roots: bookmarkStore.allBookmarkURLs)
         }
         .focusedValue(\.quickLookAction, quickLookFocusedAction)
     }
@@ -113,9 +117,11 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Button("Add Location…", action: showPicker)
-                Button(indexCoordinator.isIndexing ? "Cancel" : "Index Now", action: toggleIndexing)
+                Button(indexCoordinator.isIndexing ? "Cancel" : "Update Index", action: toggleIndexing)
                     .disabled(bookmarkStore.bookmarks.isEmpty)
-                Button("Reset Index") { indexCoordinator.resetIndex() }
+                    .help("Scan bookmarked folders for new or changed files")
+                Button("Rebuild Index") { indexCoordinator.resetIndex() }
+                    .help("Erase and recreate the entire search index")
                 Spacer()
             }
             Text(statusSummary)
@@ -210,6 +216,7 @@ struct ContentView: View {
         List(selection: $selectedResultPath) {
             ForEach(searchViewModelResults, id: \.path) { hit in
                 ResultRow(hit: hit)
+                    .environmentObject(indexCoordinator)
                     .contentShape(Rectangle())
                     .onTapGesture { selectedResultPath = hit.path }
                     .onTapGesture(count: 2) {
@@ -266,7 +273,7 @@ struct ContentView: View {
         if indexCoordinator.isIndexing {
             indexCoordinator.cancel()
         } else {
-            indexCoordinator.startIndexing(roots: bookmarkStore.allBookmarkURLs)
+            indexCoordinator.startIndexing(roots: bookmarkStore.allBookmarkURLs, mode: .incremental)
         }
     }
 
@@ -286,16 +293,34 @@ struct ContentView: View {
 
     private func quickLookSelected() {
         guard let hit = selectedHit else { return }
+        if indexCoordinator.isCloudPlaceholder(path: hit.path) {
+            showCloudPlaceholderAlert(for: hit.path)
+            return
+        }
         quickLook(path: hit.path, bookmarkStore: bookmarkStore)
     }
 
     private func openFile(at path: String) {
+        if indexCoordinator.isCloudPlaceholder(path: path) {
+            showCloudPlaceholderAlert(for: path)
+            return
+        }
         if let scoped = bookmarkStore.scopedURL(forAbsolutePath: path) {
             NSWorkspace.shared.open(scoped.url)
             scoped.stopAccess()
         } else {
             NSWorkspace.shared.open(URL(fileURLWithPath: path))
         }
+    }
+
+    private func showCloudPlaceholderAlert(for path: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        let fileName = URL(fileURLWithPath: path).lastPathComponent
+        alert.messageText = "Download Required"
+        alert.informativeText = "\(fileName) is stored in the cloud. Download it locally before previewing or opening."
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     private func bindingForBookmark(at index: Int) -> Binding<Bool> {
@@ -331,7 +356,7 @@ struct ContentView: View {
         if let indexed = indexCoordinator.lastIndexDate {
             let formatter = RelativeDateTimeFormatter()
             let relative = formatter.localizedString(for: indexed, relativeTo: Date())
-            return "Last indexed \(relative) — \(indexCoordinator.status)"
+            return "Last updated \(relative) — \(indexCoordinator.status)"
         }
         return indexCoordinator.status
     }

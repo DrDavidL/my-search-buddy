@@ -8,14 +8,28 @@ final class IndexCoordinator: ObservableObject {
     @Published var filesIndexed: Int = 0
     @Published var lastIndexDate: Date?
     @Published private(set) var samplingPolicy = ContentCoverageSettings.defaultSamplingPolicy()
+    @Published private(set) var cloudPlaceholders: Set<String> = []
 
     private var task: Task<Void, Never>?
     private let indexDirectory: URL
+    private let defaults = UserDefaults.standard
+    private let lastIndexDefaultsKey = "indexCoordinator.lastIndexDate"
+    private let autoIndexInterval: TimeInterval = 60
+    private var lastAutoIndexAttempt: Date?
+
+    enum IndexMode {
+        case incremental
+        case full
+    }
 
     init() {
         indexDirectory = IndexCoordinator.defaultIndexDirectory()
         ensureIndexDirectoryExists()
         FinderCore.initIndex(at: indexDirectory.path)
+
+        if let storedDate = defaults.object(forKey: lastIndexDefaultsKey) as? Date {
+            lastIndexDate = storedDate
+        }
     }
 
     static func defaultIndexDirectory() -> URL {
@@ -30,27 +44,36 @@ final class IndexCoordinator: ObservableObject {
         samplingPolicy = policy
     }
 
-    func startIndexing(roots: [URL]) {
+    func startIndexing(roots: [URL], mode: IndexMode = .incremental) {
         guard !roots.isEmpty else { return }
         cancel()
 
         isIndexing = true
-        status = "Preparing…"
+        status = mode == .full ? "Rebuilding index…" : "Checking for updates…"
         filesIndexed = 0
 
         let policy = samplingPolicy
 
-        FinderCore.close()
-        FinderCore.initIndex(at: indexDirectory.path)
+        if mode == .full {
+            FinderCore.close()
+            FinderCore.initIndex(at: indexDirectory.path)
+        }
 
-        task = Task.detached(priority: .userInitiated) { [weak self] in
+        let baseline = mode == .incremental ? lastIndexDate : nil
+
+        task = Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
             let startTime = Date()
 
             var totalProcessed = 0
             for root in roots {
                 if Task.isCancelled { break }
-                let processed = await self.indexRoot(root, startingFrom: totalProcessed, policy: policy)
+                let processed = await self.indexRoot(
+                    root,
+                    startingFrom: totalProcessed,
+                    policy: policy,
+                    since: baseline
+                )
                 totalProcessed += processed
             }
 
@@ -61,8 +84,14 @@ final class IndexCoordinator: ObservableObject {
                     self.status = "Indexing cancelled."
                 } else {
                     let elapsed = Date().timeIntervalSince(startTime)
-                    self.status = String(format: "Indexed %d files (%.1fs)", finalTotal, elapsed)
-                    self.lastIndexDate = Date()
+                    if finalTotal == 0 {
+                        self.status = String(format: "Index up to date (%.1fs)", elapsed)
+                    } else {
+                        self.status = String(format: "Indexed %d files (%.1fs)", finalTotal, elapsed)
+                    }
+                    let completionDate = Date()
+                    self.lastIndexDate = completionDate
+                    self.defaults.set(completionDate, forKey: self.lastIndexDefaultsKey)
                 }
                 self.filesIndexed = finalTotal
             }
@@ -77,6 +106,28 @@ final class IndexCoordinator: ObservableObject {
         }
     }
 
+    @MainActor
+    func requestIncrementalIndexIfNeeded(roots: [URL]) {
+        guard !roots.isEmpty else { return }
+        guard !isIndexing else { return }
+
+        let now = Date()
+        if let lastAttempt = lastAutoIndexAttempt, now.timeIntervalSince(lastAttempt) < autoIndexInterval {
+            return
+        }
+        lastAutoIndexAttempt = now
+
+        if let lastRun = lastIndexDate, now.timeIntervalSince(lastRun) < autoIndexInterval {
+            return
+        }
+
+        startIndexing(roots: roots, mode: .incremental)
+    }
+
+    func isCloudPlaceholder(path: String) -> Bool {
+        cloudPlaceholders.contains(path)
+    }
+
     private func ensureIndexDirectoryExists() {
         let fm = FileManager.default
         try? fm.createDirectory(at: indexDirectory, withIntermediateDirectories: true)
@@ -85,6 +136,7 @@ final class IndexCoordinator: ObservableObject {
     private func process(
         url: URL,
         keys: Set<URLResourceKey>,
+        cutoff: Date?,
         processed: inout Int,
         lastCommit: inout Date,
         policy: ContentSamplingPolicy
@@ -96,18 +148,40 @@ final class IndexCoordinator: ObservableObject {
                 return
             }
 
-            let size = Int64(values.fileSize ?? 0)
-            if size <= 0 {
+            let sizeValue = Int64(values.fileSize ?? 0)
+
+            let modificationDate = values.contentModificationDate ?? Date()
+            if let cutoff, modificationDate <= cutoff {
                 return
             }
 
-            let modificationDate = values.contentModificationDate ?? Date()
+            let isCloudItem = values.isUbiquitousItem ?? false
+            let downloadStatus = values.ubiquitousItemDownloadingStatus ?? .notDownloaded
+            let isLocalCopy = !isCloudItem || downloadStatus == .current
+            let cloudPlaceholder = isCloudItem && !isLocalCopy
+
+            if cloudPlaceholder {
+                DispatchQueue.main.async { [weak self] in
+                    self?.cloudPlaceholders.insert(url.path)
+                }
+            } else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.cloudPlaceholders.remove(url.path)
+                }
+            }
+
+            if sizeValue <= 0 && !cloudPlaceholder {
+                return
+            }
+
+            let effectiveSize = max(sizeValue, 0)
+
             let meta = FinderCore.FileMeta(
                 path: url.path,
                 name: url.lastPathComponent,
                 ext: url.pathExtension.isEmpty ? nil : url.pathExtension,
                 modifiedAt: Int64(modificationDate.timeIntervalSince1970),
-                size: UInt64(size),
+                size: UInt64(effectiveSize),
                 inode: 0,
                 dev: 0
             )
@@ -116,7 +190,12 @@ final class IndexCoordinator: ObservableObject {
                 return
             }
 
-            let content = loadContentIfPossible(from: url, size: size, policy: policy)
+            let content: String?
+            if cloudPlaceholder {
+                content = nil
+            } else {
+                content = loadContentIfPossible(from: url, size: Int64(effectiveSize), policy: policy)
+            }
 
             if FinderCore.addOrUpdate(meta: meta, content: content) {
                 processed += 1
@@ -136,14 +215,22 @@ final class IndexCoordinator: ObservableObject {
     private func indexRoot(
         _ root: URL,
         startingFrom totalProcessed: Int,
-        policy: ContentSamplingPolicy
+        policy: ContentSamplingPolicy,
+        since cutoff: Date?
     ) async -> Int {
         var processed = 0
         guard root.startAccessingSecurityScopedResource() else { return 0 }
         defer { root.stopAccessingSecurityScopedResource() }
 
         let fm = FileManager.default
-        let keys: Set<URLResourceKey> = [.isDirectoryKey, .isRegularFileKey, .fileSizeKey, .contentModificationDateKey]
+        let keys: Set<URLResourceKey> = [
+            .isDirectoryKey,
+            .isRegularFileKey,
+            .fileSizeKey,
+            .contentModificationDateKey,
+            .isUbiquitousItemKey,
+            .ubiquitousItemDownloadingStatusKey
+        ]
         guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles, .producesRelativePathURLs]) else {
             return 0
         }
@@ -154,6 +241,7 @@ final class IndexCoordinator: ObservableObject {
 
             if process(url: entry,
                        keys: keys,
+                       cutoff: cutoff,
                        processed: &processed,
                        lastCommit: &lastCommit,
                        policy: policy) {
@@ -170,9 +258,12 @@ final class IndexCoordinator: ObservableObject {
 
         FinderCore.commitAndRefresh()
         let finalTotal = totalProcessed + processed
+        let indexedAnything = processed > 0
         await MainActor.run {
             self.filesIndexed = finalTotal
-            self.status = "Indexed \(finalTotal) files…"
+            if indexedAnything {
+                self.status = "Indexed \(finalTotal) files…"
+            }
         }
         return processed
     }
@@ -186,6 +277,8 @@ final class IndexCoordinator: ObservableObject {
         filesIndexed = 0
         status = "Index reset"
         lastIndexDate = nil
+        defaults.removeObject(forKey: lastIndexDefaultsKey)
+        cloudPlaceholders.removeAll()
     }
 
     private func loadContentIfPossible(
