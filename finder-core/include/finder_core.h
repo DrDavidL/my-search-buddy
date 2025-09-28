@@ -41,6 +41,7 @@ typedef struct {
 
 bool fc_init_index(const char *index_dir);
 void fc_close_index(void);
+bool fc_should_reindex(const FCFileMeta *meta);
 bool fc_add_or_update(const FCFileMeta *meta, const char *utf8_content_or_null);
 bool fc_commit_and_refresh(void);
 FCResults fc_search(const FCQuery *query);

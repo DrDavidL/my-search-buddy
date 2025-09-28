@@ -3,6 +3,7 @@ import FinderCoreFFI
 
 struct ContentView: View {
     @EnvironmentObject private var bookmarkStore: BookmarkStore
+    @EnvironmentObject private var coverageSettings: ContentCoverageSettings
     @StateObject private var indexCoordinator = IndexCoordinator()
     @StateObject private var searchViewModel = SearchViewModel()
 
@@ -18,9 +19,15 @@ struct ContentView: View {
         }
         .padding(24)
         .frame(minWidth: 900, minHeight: 560)
-        .onAppear { searchFieldIsFocused = true }
+        .onAppear {
+            searchFieldIsFocused = true
+            indexCoordinator.applySamplingPolicy(coverageSettings.samplingPolicy)
+        }
         .onChange(of: searchViewModelResults) { hits in
             selectedResultPath = hits.first?.path
+        }
+        .onChange(of: coverageSettings.samplingPolicy) { policy in
+            indexCoordinator.applySamplingPolicy(policy)
         }
     }
 

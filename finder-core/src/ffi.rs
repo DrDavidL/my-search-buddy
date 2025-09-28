@@ -61,37 +61,33 @@ pub extern "C" fn fc_close_index() {
 
 #[no_mangle]
 pub extern "C" fn fc_add_or_update(meta: *const FCFileMeta, content: *const c_char) -> bool {
-    let Some(meta_ref) = (unsafe { meta.as_ref() }) else {
-        eprintln!("[ffi] fc_add_or_update received null meta pointer");
+    let Some(file_meta) = file_meta_from_ffi(meta) else {
+        eprintln!("[ffi] fc_add_or_update received invalid meta");
         return false;
     };
-
-    let Some(path) = to_string(meta_ref.path) else {
-        eprintln!("[ffi] fc_add_or_update missing path");
-        return false;
-    };
-    let Some(name) = to_string(meta_ref.name) else {
-        eprintln!("[ffi] fc_add_or_update missing name");
-        return false;
-    };
-    let ext = to_string(meta_ref.ext).and_then(|s| if s.is_empty() { None } else { Some(s) });
     let content_opt = to_string(content);
-
-    let file_meta = FileMeta {
-        path,
-        name,
-        ext,
-        modified_at: meta_ref.mtime,
-        size: meta_ref.size,
-        inode: meta_ref.inode,
-        dev: meta_ref.dev,
-    };
 
     match add_or_update_file(file_meta, content_opt, false) {
         Ok(IndexUpdate::Added | IndexUpdate::Updated | IndexUpdate::Skipped) => true,
         Err(err) => {
             eprintln!("[ffi] add_or_update_file failed: {err}");
             false
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn fc_should_reindex(meta: *const FCFileMeta) -> bool {
+    let Some(file_meta) = file_meta_from_ffi(meta) else {
+        eprintln!("[ffi] fc_should_reindex received invalid meta");
+        return false;
+    };
+
+    match crate::should_reindex(&file_meta) {
+        Ok(should) => should,
+        Err(err) => {
+            eprintln!("[ffi] should_reindex failed: {err}");
+            true
         }
     }
 }
@@ -231,6 +227,24 @@ fn to_string(ptr: *const c_char) -> Option<String> {
     } else {
         unsafe { Some(CStr::from_ptr(ptr).to_string_lossy().into_owned()) }
     }
+}
+
+fn file_meta_from_ffi(meta: *const FCFileMeta) -> Option<FileMeta> {
+    let meta_ref = unsafe { meta.as_ref() }?;
+
+    let path = to_string(meta_ref.path)?;
+    let name = to_string(meta_ref.name)?;
+    let ext = to_string(meta_ref.ext).and_then(|s| if s.is_empty() { None } else { Some(s) });
+
+    Some(FileMeta {
+        path,
+        name,
+        ext,
+        modified_at: meta_ref.mtime,
+        size: meta_ref.size,
+        inode: meta_ref.inode,
+        dev: meta_ref.dev,
+    })
 }
 
 #[cfg(test)]

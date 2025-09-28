@@ -18,6 +18,23 @@ Early-stage workspace for the macOS search companion app. The repo hosts:
 3. Open `mac-app/MySearchBuddy.xcodeproj`, select the **MySearchBuddy** scheme, and build/run. (You can also use `xcodebuild -scheme MySearchBuddy -configuration Debug`.)
 4. Tests: `cargo test -p finder-core` (Rust) and `swift test` inside `mac-app/Packages/FinderCoreFFI` once the dylib is built.
 
+## Indexing Model
+
+- **Recent-aware results.** The index stores modified timestamps and the UI ships with a `Modified` sort toggle plus a last-indexed status, making it easy to surface the newest files right after a scan. Incremental refresh support is on the roadmap so frequent folders stay fresh without triggering a full rebuild.
+- **No double work.** Each document is fingerprinted via device/inode + path, so unchanged files are skipped without reopening their contents on subsequent runs.
+- **Full builds stay fast.** Tantivy commits happen in batches (count or time based), letting the index refresh quickly while still delivering Lucene-grade search speed.
+- **Content sampling (beta).** Plaintext is sniffed with binary heuristics and, when enabled, sampled according to your preference (target default: 10% total with 8% from the beginning and 2% from the tail; small files index fully).
+- **Format adapters roadmap.** Plain UTF-8 content is available today; PDF, DOCX, Markdown, and HTML adapters plug into the same pipeline so content searches keep pace as new extractors land.
+
+### Content Coverage Preference (beta)
+
+We are rolling out a user-facing knob for how much text to index per file:
+
+- **Default target:** 10% coverage (8% head, 2% tail) so search stays representative without ballooning the index. This keeps snippets meaningful even for large reports.
+- **Small files:** Anything under 128 KB is ingested in full regardless of the slider to preserve exact matches.
+- **Upcoming controls:** The macOS preferences panel gains an `Indexing ▸ Content coverage` slider (2%–50%) and we will expose the same value as `MSB_CONTENT_PERCENT` for CLI/automation use.
+- **Why it matters:** Lower percentages keep the index lean on huge datasets; higher percentages are ideal for research archives where the tail carries citations or appendices you routinely search.
+
 ## Privacy at a glance
 
 > **Local-only.** Indexing and search happen entirely on your device.  
@@ -65,4 +82,3 @@ v0.2 is in flight. Expect rapid iteration and breaking changes while the MVP cor
   cbindgen --config finder-core/cbindgen.toml --crate finder-core --output finder-core/include/finder_core.h
   ```
 - Build the dynamic library for Swift with `cargo build -p finder-core` (debug) or `cargo build -p finder-core --release` and point `FINDER_CORE_DYLIB` at the resulting `.dylib` before running Swift tests.
-

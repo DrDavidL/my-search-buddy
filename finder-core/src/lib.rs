@@ -35,6 +35,10 @@ pub fn add_or_update_file(
     indexer::add_or_update_file(meta, content_opt, force_reindex)
 }
 
+pub fn should_reindex(meta: &FileMeta) -> Result<bool> {
+    indexer::should_reindex(meta)
+}
+
 pub fn commit() -> Result<()> {
     indexer::commit()
 }

@@ -193,6 +193,17 @@ pub fn add_or_update_file(
     Ok(update)
 }
 
+pub fn should_reindex(meta: &FileMeta) -> Result<bool> {
+    let handle = index_handle()?;
+    let identity = meta.identity();
+
+    if let Some(existing) = find_existing(&handle, &identity)? {
+        Ok(!existing.matches_meta(meta))
+    } else {
+        Ok(true)
+    }
+}
+
 pub fn commit() -> Result<()> {
     let handle = index_handle()?;
     {
