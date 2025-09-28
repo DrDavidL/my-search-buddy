@@ -20,11 +20,12 @@ Early-stage workspace for the macOS search companion app. The repo hosts:
 
 ## Indexing Model
 
-- **Recent-aware results.** The index stores modified timestamps and the UI ships with a `Modified` sort toggle plus a last-indexed status, making it easy to surface the newest files right after a scan. Incremental refresh support is on the roadmap so frequent folders stay fresh without triggering a full rebuild.
+- **Recent-aware results.** The index stores modified timestamps and the UI ships with a `Modified` sort toggle plus a last-indexed status, making it easy to surface the newest files right after a scan. On launch (and whenever you add/enable folders) the app automatically runs a lightweight incremental sweep using the previous index timestamp so fresh files appear without a manual rebuild.
 - **No double work.** Each document is fingerprinted via device/inode + path, so unchanged files are skipped without reopening their contents on subsequent runs.
 - **Full builds stay fast.** Tantivy commits happen in batches (count or time based), letting the index refresh quickly while still delivering Lucene-grade search speed.
 - **Content sampling (beta).** Plaintext is sniffed with binary heuristics and, when enabled, sampled according to your preference (target default: 10% total with 8% from the beginning and 2% from the tail; small files index fully).
 - **Format adapters roadmap.** Plain UTF-8 content is available today; PDF, DOCX, Markdown, and HTML adapters plug into the same pipeline so content searches keep pace as new extractors land.
+- **Cloud-aware metadata.** Files that still live exclusively in iCloud/OneDrive/Dropbox placeholders are indexed by name and path, labelled with a cloud badge in results, and prompt the user to download before previewing. Once the file becomes available locally, the next incremental pass upgrades it with full content.
 
 ### Content Coverage Preference (beta)
 
@@ -69,6 +70,7 @@ We are rolling out a user-facing knob for how much text to index per file:
 - **Location filters:** checkboxes per indexed folder with “All” and “None” shortcuts; only enabled locations are searched.
 - **Search controls:** explicit Search & Clear buttons, scope toggle (Name/Content/Both), and sort toggle (Score/Modified).
 - **Actions:** Open in Finder, Quick Look (sandbox-safe controller), and Reset Index.
+- **Index maintenance:** "Update Index" performs an incremental scan using the last indexed timestamp; "Rebuild Index" wipes the Tantivy store and recreates it when you need a clean slate.
 - **Status:** shows last index time and status message beneath the indexing controls.
 
 ## Status
