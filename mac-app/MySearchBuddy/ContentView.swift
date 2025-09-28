@@ -266,7 +266,7 @@ struct ContentView: View {
         if indexCoordinator.isIndexing {
             indexCoordinator.cancel()
         } else {
-            indexCoordinator.startIndexing(roots: bookmarkStore.urls)
+            indexCoordinator.startIndexing(roots: bookmarkStore.allBookmarkURLs)
         }
     }
 

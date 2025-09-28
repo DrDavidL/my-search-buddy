@@ -13,7 +13,9 @@ final class BookmarkStore: ObservableObject {
     var enabledURLs: [URL] {
         bookmarks.filter { $0.isEnabled }.map { $0.url }
     }
-    @Published var urls: [URL] = []
+    var allBookmarkURLs: [URL] {
+        bookmarks.map { $0.url }
+    }
     private let key = "bookmarks.v1"
 
     struct ScopedURL {
@@ -44,10 +46,11 @@ final class BookmarkStore: ObservableObject {
             guard isDescendant else { continue }
             guard root.startAccessingSecurityScopedResource() else { continue }
 
-            let relativeComponents = Array(targetComponents.dropFirst(rootComponents.count))
             var scopedURL = root
-            for (index, component) in relativeComponents.enumerated() {
-                let isDirectoryComponent = index < relativeComponents.count - 1
+            let lastIndex = targetComponents.count - 1
+            for index in rootComponents.count..<targetComponents.count {
+                let component = targetComponents[index]
+                let isDirectoryComponent = index < lastIndex
                 scopedURL.appendPathComponent(component, isDirectory: isDirectoryComponent)
             }
 
@@ -105,7 +108,6 @@ final class BookmarkStore: ObservableObject {
             }
             return url
         }
-        urls = resolved
         bookmarks = resolved.map { url in
             Bookmark(id: UUID(), url: url, isEnabled: true)
         }

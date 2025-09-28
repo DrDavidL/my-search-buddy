@@ -14,14 +14,22 @@ private final class QuickLookCoordinator: NSResponder, QLPreviewPanelDelegate, Q
 
     func present(paths: [String], using bookmarkStore: BookmarkStore) {
         releaseScopedAccess()
+
+        var inaccessible: [String] = []
         items = paths.compactMap { path in
             if let scoped = bookmarkStore.scopedURL(forAbsolutePath: path) {
                 return ScopedPreviewItem(url: scoped.url, stopAccess: scoped.stopAccess)
             }
-            return ScopedPreviewItem(url: URL(fileURLWithPath: path), stopAccess: nil)
+            inaccessible.append(path)
+            return nil
         }
 
-        guard !items.isEmpty else { return }
+        guard !items.isEmpty else {
+            if !inaccessible.isEmpty {
+                presentAccessAlert(for: inaccessible)
+            }
+            return
+        }
         guard let panel = QLPreviewPanel.shared(), let window = NSApp.keyWindow else {
             releaseScopedAccess()
             return
@@ -64,6 +72,19 @@ private final class QuickLookCoordinator: NSResponder, QLPreviewPanelDelegate, Q
             item.stopAccess?()
         }
         items.removeAll()
+    }
+
+    private func presentAccessAlert(for paths: [String]) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Cannot Preview File"
+        if paths.count == 1, let path = paths.first {
+            alert.informativeText = "Quick Look doesn't have permission to preview \(path). Add its parent folder under Locations first."
+        } else {
+            alert.informativeText = "Quick Look doesn't have permission to preview the selected files. Add their folders under Locations first."
+        }
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 }
 

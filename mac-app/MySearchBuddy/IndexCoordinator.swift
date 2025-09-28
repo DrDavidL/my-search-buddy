@@ -2,7 +2,6 @@ import Foundation
 import FinderCoreFFI
 import SwiftUI
 
-@MainActor
 final class IndexCoordinator: ObservableObject {
     @Published var isIndexing = false
     @Published var status: String = "Idle"
@@ -44,7 +43,7 @@ final class IndexCoordinator: ObservableObject {
         FinderCore.close()
         FinderCore.initIndex(at: indexDirectory.path)
 
-        task = Task.detached(priority: .utility) { [weak self] in
+        task = Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             let startTime = Date()
 
@@ -55,16 +54,17 @@ final class IndexCoordinator: ObservableObject {
                 totalProcessed += processed
             }
 
+            let finalTotal = totalProcessed
             await MainActor.run {
                 self.isIndexing = false
                 if Task.isCancelled {
                     self.status = "Indexing cancelled."
                 } else {
                     let elapsed = Date().timeIntervalSince(startTime)
-                    self.status = String(format: "Indexed %d files (%.1fs)", totalProcessed, elapsed)
+                    self.status = String(format: "Indexed %d files (%.1fs)", finalTotal, elapsed)
                     self.lastIndexDate = Date()
                 }
-                self.filesIndexed = totalProcessed
+                self.filesIndexed = finalTotal
             }
         }
     }
@@ -80,6 +80,57 @@ final class IndexCoordinator: ObservableObject {
     private func ensureIndexDirectoryExists() {
         let fm = FileManager.default
         try? fm.createDirectory(at: indexDirectory, withIntermediateDirectories: true)
+    }
+
+    private func process(
+        url: URL,
+        keys: Set<URLResourceKey>,
+        processed: inout Int,
+        lastCommit: inout Date,
+        policy: ContentSamplingPolicy
+    ) -> Bool {
+        var didUpdate = false
+
+        autoreleasepool {
+            guard let values = try? url.resourceValues(forKeys: keys), values.isDirectory != true else {
+                return
+            }
+
+            let size = Int64(values.fileSize ?? 0)
+            if size <= 0 {
+                return
+            }
+
+            let modificationDate = values.contentModificationDate ?? Date()
+            let meta = FinderCore.FileMeta(
+                path: url.path,
+                name: url.lastPathComponent,
+                ext: url.pathExtension.isEmpty ? nil : url.pathExtension,
+                modifiedAt: Int64(modificationDate.timeIntervalSince1970),
+                size: UInt64(size),
+                inode: 0,
+                dev: 0
+            )
+
+            guard FinderCore.shouldReindex(meta: meta) else {
+                return
+            }
+
+            let content = loadContentIfPossible(from: url, size: size, policy: policy)
+
+            if FinderCore.addOrUpdate(meta: meta, content: content) {
+                processed += 1
+                didUpdate = true
+            }
+
+            let now = Date()
+            if now.timeIntervalSince(lastCommit) > 2.0 || (processed % 1000 == 0 && processed > 0) {
+                FinderCore.commitAndRefresh()
+                lastCommit = now
+            }
+        }
+
+        return didUpdate
     }
 
     private func indexRoot(
@@ -98,48 +149,22 @@ final class IndexCoordinator: ObservableObject {
         }
 
         var lastCommit = Date()
-        for case let url as URL in enumerator {
+        while let entry = enumerator.nextObject() as? URL {
             if Task.isCancelled { break }
 
-            guard let values = try? url.resourceValues(forKeys: keys), values.isDirectory != true else {
-                continue
-            }
-
-            let size = Int64(values.fileSize ?? 0)
-            if size <= 0 { continue }
-
-            let modificationDate = values.contentModificationDate ?? Date()
-            let meta = FinderCore.FileMeta(
-                path: url.path,
-                name: url.lastPathComponent,
-                ext: url.pathExtension.isEmpty ? nil : url.pathExtension,
-                modifiedAt: Int64(modificationDate.timeIntervalSince1970),
-                size: UInt64(size),
-                inode: 0,
-                dev: 0
-            )
-
-            guard FinderCore.shouldReindex(meta: meta) else {
-                continue
-            }
-
-            let content = loadContentIfPossible(from: url, size: size, policy: policy)
-
-            if FinderCore.addOrUpdate(meta: meta, content: content) {
-                processed += 1
+            if process(url: entry,
+                       keys: keys,
+                       processed: &processed,
+                       lastCommit: &lastCommit,
+                       policy: policy) {
                 let runningTotal = totalProcessed + processed
                 if processed % 50 == 0 {
-                    await MainActor.run {
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self else { return }
                         self.filesIndexed = runningTotal
                         self.status = "Indexed \(runningTotal) files…"
                     }
                 }
-            }
-
-            let now = Date()
-            if now.timeIntervalSince(lastCommit) > 2.0 || (processed % 1000 == 0 && processed > 0) {
-                FinderCore.commitAndRefresh()
-                lastCommit = now
             }
         }
 
@@ -189,7 +214,7 @@ final class IndexCoordinator: ObservableObject {
 
     private func readFullContent(from url: URL) -> String? {
         do {
-            let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+            let data = try Data(contentsOf: url, options: [.mappedIfSafe, .uncached])
             if isLikelyBinary(data: data) { return nil }
             return decode(data)
         } catch {
@@ -283,3 +308,5 @@ final class IndexCoordinator: ObservableObject {
         return Double(nonPrintable) / Double(sample.count) > 0.10
     }
 }
+
+extension IndexCoordinator: @unchecked Sendable {}

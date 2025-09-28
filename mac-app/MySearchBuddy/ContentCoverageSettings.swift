@@ -116,7 +116,7 @@ final class ContentCoverageSettings: ObservableObject {
         )
     }
 
-    static func defaultSamplingPolicy() -> ContentSamplingPolicy {
+    nonisolated static func defaultSamplingPolicy() -> ContentSamplingPolicy {
         ContentSamplingPolicy.fromPercentage(
             Constants.defaultPercentage,
             headShare: Constants.headShare,
