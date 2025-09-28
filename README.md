@@ -23,6 +23,7 @@ Early-stage workspace for the macOS search companion app. The repo hosts:
 - **30-day free trial.** Every Apple ID gets a month of full functionality to kick the tires.
 - **$9.99/year thereafter.** Auto-renewing subscription that funds continuous extractor upgrades, incremental indexing improvements, and priority feature requests.
 - Manage or cancel anytime via the App Store subscription settings; the app reverts to paywall mode when the subscription lapses.
+- **Source stays MIT.** This repository remains MIT licensed, so you can inspect or fork the code, while the commercial App Store build is delivered under the subscription above. Contributions continue to be accepted under MIT-compatible terms.
 
 ## Indexing Model
 
