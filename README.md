@@ -18,6 +18,12 @@ Early-stage workspace for the macOS search companion app. The repo hosts:
 3. Open `mac-app/MySearchBuddy.xcodeproj`, select the **MySearchBuddy** scheme, and build/run. (You can also use `xcodebuild -scheme MySearchBuddy -configuration Debug`.)
 4. Tests: `cargo test -p finder-core` (Rust) and `swift test` inside `mac-app/Packages/FinderCoreFFI` once the dylib is built.
 
+## Pricing & Availability
+
+- **30-day free trial.** Every Apple ID gets a month of full functionality to kick the tires.
+- **$9.99/year thereafter.** Auto-renewing subscription that funds continuous extractor upgrades, incremental indexing improvements, and priority feature requests.
+- Manage or cancel anytime via the App Store subscription settings; the app reverts to paywall mode when the subscription lapses.
+
 ## Indexing Model
 
 - **Recent-aware results.** The index stores modified timestamps and the UI ships with a `Modified` sort toggle plus a last-indexed status, making it easy to surface the newest files right after a scan. On launch (and whenever you add/enable folders) the app automatically runs a lightweight incremental sweep using the previous index timestamp so fresh files appear without a manual rebuild.

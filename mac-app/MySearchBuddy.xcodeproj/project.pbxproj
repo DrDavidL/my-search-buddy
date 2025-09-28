@@ -10,14 +10,17 @@
 		1A3B3F201BE9D4F200C5A7C5 /* MySearchBuddyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A3B3F191BE9D4F200C5A7C5 /* MySearchBuddyApp.swift */; };
 		1A3B3F211BE9D4F200C5A7C5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A3B3F1A1BE9D4F200C5A7C5 /* ContentView.swift */; };
 		1A3B3F221BE9D4F200C5A7C5 /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A3B3F1B1BE9D4F200C5A7C5 /* BookmarkStore.swift */; };
+		1A3B3F281BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */; };
+		1A3B3F2C1BE9D4F200C5A7C5 /* FinderCoreFFI in Frameworks */ = {isa = PBXBuildFile; productRef = 1A3B3F2B1BE9D4F200C5A7C5 /* FinderCoreFFI */; };
 		1AC5F0021C23456800ABCDEF /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */; };
 		1AC5F0041C23456800ABCDEF /* ResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0051C23456800ABCDEF /* ResultRow.swift */; };
 		1AC5F0061C23456800ABCDEF /* QuickLookHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */; };
 		1AFED0011C24567800ABCDE0 /* IndexCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AFED0001C24567800ABCDE0 /* IndexCoordinator.swift */; };
 		1B0E1F011D5C123400000001 /* ContentCoverageSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0E1F001D5C123400000001 /* ContentCoverageSettings.swift */; };
 		1B0E1F031D5C123400000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0E1F021D5C123400000001 /* SettingsView.swift */; };
-		1A3B3F281BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */; };
-		1A3B3F2C1BE9D4F200C5A7C5 /* FinderCoreFFI in Frameworks */ = {isa = PBXBuildFile; productRef = 1A3B3F2B1BE9D4F200C5A7C5 /* FinderCoreFFI */; };
+		1B0E1F051D5C123400000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1B0E1F041D5C123400000001 /* Assets.xcassets */; };
+		1B0E1F071D5C123400000001 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0E1F061D5C123400000001 /* PurchaseManager.swift */; };
+		1B0E1F091D5C123400000001 /* SubscriptionPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0E1F081D5C123400000001 /* SubscriptionPaywallView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,15 +28,18 @@
 		1A3B3F191BE9D4F200C5A7C5 /* MySearchBuddyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MySearchBuddyApp.swift; sourceTree = "<group>"; };
 		1A3B3F1A1BE9D4F200C5A7C5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1A3B3F1B1BE9D4F200C5A7C5 /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkStore.swift; sourceTree = "<group>"; };
-		1AFED0001C24567800ABCDE0 /* IndexCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexCoordinator.swift; sourceTree = "<group>"; };
-		1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
-		1AC5F0051C23456800ABCDEF /* ResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultRow.swift; sourceTree = "<group>"; };
-		1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookHelper.swift; sourceTree = "<group>"; };
-		1B0E1F001D5C123400000001 /* ContentCoverageSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentCoverageSettings.swift; sourceTree = "<group>"; };
-		1B0E1F021D5C123400000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1A3B3F1C1BE9D4F200C5A7C5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1A3B3F1D1BE9D4F200C5A7C5 /* MySearchBuddy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MySearchBuddy.entitlements; sourceTree = "<group>"; };
 		1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		1AC5F0051C23456800ABCDEF /* ResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultRow.swift; sourceTree = "<group>"; };
+		1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookHelper.swift; sourceTree = "<group>"; };
+		1AFED0001C24567800ABCDE0 /* IndexCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexCoordinator.swift; sourceTree = "<group>"; };
+		1B0E1F001D5C123400000001 /* ContentCoverageSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentCoverageSettings.swift; sourceTree = "<group>"; };
+		1B0E1F021D5C123400000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		1B0E1F041D5C123400000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1B0E1F061D5C123400000001 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
+		1B0E1F081D5C123400000001 /* SubscriptionPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionPaywallView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +74,7 @@
 		1A3B3F181BE9D4F200C5A7C5 /* MySearchBuddy */ = {
 			isa = PBXGroup;
 			children = (
+				1B0E1F041D5C123400000001 /* Assets.xcassets */,
 				1A3B3F191BE9D4F200C5A7C5 /* MySearchBuddyApp.swift */,
 				1A3B3F1A1BE9D4F200C5A7C5 /* ContentView.swift */,
 				1AFED0001C24567800ABCDE0 /* IndexCoordinator.swift */,
@@ -76,6 +83,8 @@
 				1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */,
 				1B0E1F001D5C123400000001 /* ContentCoverageSettings.swift */,
 				1B0E1F021D5C123400000001 /* SettingsView.swift */,
+				1B0E1F061D5C123400000001 /* PurchaseManager.swift */,
+				1B0E1F081D5C123400000001 /* SubscriptionPaywallView.swift */,
 				1A3B3F1B1BE9D4F200C5A7C5 /* BookmarkStore.swift */,
 				1A3B3F1C1BE9D4F200C5A7C5 /* Info.plist */,
 				1A3B3F1D1BE9D4F200C5A7C5 /* MySearchBuddy.entitlements */,
@@ -122,7 +131,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2600;
 				ORGANIZATIONNAME = "My Search Buddy";
 			};
 			buildConfigurationList = 1A3B3F101BE9D4F200C5A7C5 /* Build configuration list for PBXProject "MySearchBuddy" */;
@@ -150,6 +159,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1B0E1F051D5C123400000001 /* Assets.xcassets in Resources */,
 				1A3B3F281BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -159,6 +169,7 @@
 /* Begin PBXSourcesBuildPhase section */
 		1A3B3F111BE9D4F200C5A7C5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
 				1AC5F0061C23456800ABCDEF /* QuickLookHelper.swift in Sources */,
 				1A3B3F201BE9D4F200C5A7C5 /* MySearchBuddyApp.swift in Sources */,
@@ -166,10 +177,13 @@
 				1AC5F0041C23456800ABCDEF /* ResultRow.swift in Sources */,
 				1AC5F0021C23456800ABCDEF /* SearchViewModel.swift in Sources */,
 				1AFED0011C24567800ABCDE0 /* IndexCoordinator.swift in Sources */,
+				1B0E1F071D5C123400000001 /* PurchaseManager.swift in Sources */,
+				1B0E1F091D5C123400000001 /* SubscriptionPaywallView.swift in Sources */,
 				1B0E1F011D5C123400000001 /* ContentCoverageSettings.swift in Sources */,
 				1B0E1F031D5C123400000001 /* SettingsView.swift in Sources */,
 				1A3B3F221BE9D4F200C5A7C5 /* BookmarkStore.swift in Sources */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
@@ -202,11 +216,15 @@
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -226,6 +244,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;
@@ -261,11 +280,15 @@
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -281,6 +304,7 @@
 				"LIBRARY_SEARCH_PATHS[arch=*]" = "$(PROJECT_DIR)/../target/release";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
@@ -296,6 +320,9 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MySearchBuddy/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -321,6 +348,9 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MySearchBuddy/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

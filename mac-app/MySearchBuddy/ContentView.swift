@@ -5,6 +5,7 @@ import FinderCoreFFI
 struct ContentView: View {
     @EnvironmentObject private var bookmarkStore: BookmarkStore
     @EnvironmentObject private var coverageSettings: ContentCoverageSettings
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @StateObject private var indexCoordinator = IndexCoordinator()
     @StateObject private var searchViewModel = SearchViewModel()
 
@@ -23,6 +24,36 @@ struct ContentView: View {
     ]
 
     var body: some View {
+        ZStack {
+            mainContent
+                .blur(shouldShowPaywall ? 4 : 0)
+                .disabled(shouldShowPaywall)
+
+            if !purchaseManager.isReady {
+                Color.black.opacity(0.25).ignoresSafeArea()
+                ProgressView("Preparing purchases…")
+                    .padding(24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(.regularMaterial)
+                    )
+                    .shadow(radius: 12)
+            } else if shouldShowPaywall {
+                Color.black.opacity(0.35).ignoresSafeArea()
+                SubscriptionPaywallView()
+                    .environmentObject(purchaseManager)
+            }
+        }
+        .task {
+            await purchaseManager.start()
+        }
+    }
+
+    private var shouldShowPaywall: Bool {
+        purchaseManager.isReady && !purchaseManager.subscriptionActive
+    }
+
+    private var mainContent: some View {
         HStack(spacing: 24) {
             leftPane
             Divider()
