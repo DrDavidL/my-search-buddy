@@ -1,0 +1,4 @@
+module FinderCoreShims {
+  header "include/finder_core_shim.h"
+  export *
+}

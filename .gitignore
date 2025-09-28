@@ -35,3 +35,8 @@ corpora/
 # Misc
 .idea/
 .vscode/
+
+# Allow bundling FinderCoreFFI package inside repo while still ignoring build products
+!mac-app/Packages/FinderCoreFFI/
+!mac-app/Packages/FinderCoreFFI/**
+mac-app/Packages/FinderCoreFFI/.build/

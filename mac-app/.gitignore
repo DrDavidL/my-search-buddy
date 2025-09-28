@@ -6,3 +6,10 @@ DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
+
+# Allow FinderCoreFFI package to be committed
+!/Packages
+!/Packages/FinderCoreFFI
+!/Packages/FinderCoreFFI/**
+/Packages/FinderCoreFFI/.build
+/Packages/FinderCoreFFI/.swiftpm
