@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import FinderCoreFFI
 
 struct ContentView: View {
@@ -10,6 +11,16 @@ struct ContentView: View {
     @FocusState private var searchFieldIsFocused: Bool
     @State private var selectedResultPath: String?
     @State private var sortBy = SortOption.score
+
+    private let officeQuickFilterTerms = [
+        "ext:doc",
+        "ext:docx",
+        "ext:ppt",
+        "ext:pptx",
+        "ext:pdf",
+        "ext:xls",
+        "ext:xlsx"
+    ]
 
     var body: some View {
         HStack(spacing: 24) {
@@ -29,6 +40,7 @@ struct ContentView: View {
         .onChange(of: coverageSettings.samplingPolicy) { policy in
             indexCoordinator.applySamplingPolicy(policy)
         }
+        .focusedValue(\.quickLookAction, quickLookFocusedAction)
     }
 
     private var leftPane: some View {
@@ -142,6 +154,9 @@ struct ContentView: View {
                 quickFilterButton(title: "PPT", query: "ext:ppt OR ext:pptx")
                 quickFilterButton(title: "PDF", query: "ext:pdf")
                 quickFilterButton(title: "XLS", query: "ext:xls OR ext:xlsx")
+                Button("Recent 50") { showRecentOfficeFiles() }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 Spacer()
             }
         }
@@ -197,7 +212,10 @@ struct ContentView: View {
                 ResultRow(hit: hit)
                     .contentShape(Rectangle())
                     .onTapGesture { selectedResultPath = hit.path }
-                    .onTapGesture(count: 2) { revealInFinder(path: hit.path) }
+                    .onTapGesture(count: 2) {
+                        selectedResultPath = hit.path
+                        openFile(at: hit.path)
+                    }
             }
         }
         .listStyle(.inset)
@@ -206,7 +224,7 @@ struct ContentView: View {
 
     private var actionButtons: some View {
         HStack {
-            Button("Open in Finder", action: openSelected)
+            Button("Open in Finder", action: revealSelectedInFinder)
                 .disabled(selectedHit == nil)
             Button("Quick Look", action: quickLookSelected)
                 .disabled(selectedHit == nil)
@@ -215,6 +233,12 @@ struct ContentView: View {
     }
 
     private var searchViewModelResults: [FinderCore.Hit] { searchViewModel.results }
+
+    private var quickLookFocusedAction: QuickLookAction {
+        QuickLookAction(isEnabled: selectedHit != nil) {
+            quickLookSelected()
+        }
+    }
 
     private var selectedHit: FinderCore.Hit? {
         guard let selectedResultPath else { return nil }
@@ -255,14 +279,23 @@ struct ContentView: View {
         .controlSize(.small)
     }
 
-    private func openSelected() {
+    private func revealSelectedInFinder() {
         guard let hit = selectedHit else { return }
         revealInFinder(path: hit.path)
     }
 
     private func quickLookSelected() {
         guard let hit = selectedHit else { return }
-        quickLook(path: hit.path)
+        quickLook(path: hit.path, bookmarkStore: bookmarkStore)
+    }
+
+    private func openFile(at path: String) {
+        if let scoped = bookmarkStore.scopedURL(forAbsolutePath: path) {
+            NSWorkspace.shared.open(scoped.url)
+            scoped.stopAccess()
+        } else {
+            NSWorkspace.shared.open(URL(fileURLWithPath: path))
+        }
     }
 
     private func bindingForBookmark(at index: Int) -> Binding<Bool> {
@@ -275,14 +308,23 @@ struct ContentView: View {
         )
     }
 
-   private func runFilteredSearch() {
+   private func runFilteredSearch(limit: Int? = nil) {
         let enabledPaths = bookmarkStore.bookmarks.filter { $0.isEnabled }.map { $0.url.path }
         searchViewModel.activeRootPaths = enabledPaths
         if searchViewModel.query.isEmpty {
             searchViewModel.clear()
-        } else {
-            searchViewModel.runSearch()
+            return
         }
+
+        searchViewModel.runSearch(limit: limit)
+    }
+
+    private func showRecentOfficeFiles() {
+        let query = officeQuickFilterTerms.joined(separator: " OR ")
+        searchViewModel.query = query
+        sortBy = .modified
+        searchViewModel.sort = .modified
+        runFilteredSearch(limit: 50)
     }
 
     private var statusSummary: String {
@@ -298,4 +340,34 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environmentObject(BookmarkStore())
+}
+
+fileprivate struct QuickLookAction {
+    let isEnabled: Bool
+    let perform: () -> Void
+}
+
+fileprivate struct QuickLookActionKey: FocusedValueKey {
+    typealias Value = QuickLookAction
+}
+
+fileprivate extension FocusedValues {
+    var quickLookAction: QuickLookAction? {
+        get { self[QuickLookActionKey.self] }
+        set { self[QuickLookActionKey.self] = newValue }
+    }
+}
+
+struct QuickLookCommands: Commands {
+    @FocusedValue(\.quickLookAction) private var quickLookAction
+
+    var body: some Commands {
+        CommandMenu("Preview") {
+            Button("Quick Look") {
+                quickLookAction?.perform()
+            }
+            .keyboardShortcut(.space, modifiers: [])
+            .disabled(quickLookAction?.isEnabled != true)
+        }
+    }
 }

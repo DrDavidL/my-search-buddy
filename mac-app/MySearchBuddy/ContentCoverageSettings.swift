@@ -65,7 +65,7 @@ final class ContentCoverageSettings: ObservableObject {
     private let envOverride: Double?
 
     @Published private(set) var userPercentage: Double
-    @Published private(set) var samplingPolicy: ContentSamplingPolicy
+    @Published private(set) var samplingPolicy: ContentSamplingPolicy = ContentCoverageSettings.defaultSamplingPolicy()
 
     var sliderRange: ClosedRange<Double> {
         Constants.minSliderPercentage...Constants.maxSliderPercentage
@@ -92,15 +92,6 @@ final class ContentCoverageSettings: ObservableObject {
         let stored = defaults.object(forKey: Constants.defaultsKey) as? Double
         let initial = envPercent ?? stored ?? Constants.defaultPercentage
         self.userPercentage = ContentCoverageSettings.clamp(initial)
-        self.samplingPolicy = ContentSamplingPolicy.fromPercentage(
-            envPercent ?? self.userPercentage,
-            headShare: Constants.headShare,
-            maxBytes: Constants.maxBytes,
-            smallFileThreshold: Constants.smallFileThreshold,
-            minHeadBytes: Constants.minHeadBytes,
-            minTailBytes: Constants.minTailBytes,
-            sniffBytes: Constants.sniffBytes
-        )
         refreshPolicy()
     }
 

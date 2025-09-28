@@ -16,6 +16,58 @@ final class BookmarkStore: ObservableObject {
     @Published var urls: [URL] = []
     private let key = "bookmarks.v1"
 
+    struct ScopedURL {
+        let url: URL
+        let stopAccess: () -> Void
+    }
+
+    func scopedURL(forAbsolutePath path: String) -> ScopedURL? {
+        let target = URL(fileURLWithPath: path).standardizedFileURL
+        let activeBookmarks = bookmarks.filter { $0.isEnabled }
+
+        for bookmark in activeBookmarks {
+            let root = bookmark.url
+            let rootStandardized = root.standardizedFileURL
+            let rootComponents = rootStandardized.pathComponents
+            let targetComponents = target.pathComponents
+
+            guard targetComponents.count >= rootComponents.count else { continue }
+
+            var isDescendant = true
+            for (index, component) in rootComponents.enumerated() {
+                if component != targetComponents[index] {
+                    isDescendant = false
+                    break
+                }
+            }
+
+            guard isDescendant else { continue }
+            guard root.startAccessingSecurityScopedResource() else { continue }
+
+            let relativeComponents = Array(targetComponents.dropFirst(rootComponents.count))
+            var scopedURL = root
+            for (index, component) in relativeComponents.enumerated() {
+                let isDirectoryComponent = index < relativeComponents.count - 1
+                scopedURL.appendPathComponent(component, isDirectory: isDirectoryComponent)
+            }
+
+            let finalURL = scopedURL
+            let hasFileScope = finalURL.startAccessingSecurityScopedResource()
+
+            return ScopedURL(
+                url: finalURL,
+                stopAccess: {
+                    if hasFileScope {
+                        finalURL.stopAccessingSecurityScopedResource()
+                    }
+                    root.stopAccessingSecurityScopedResource()
+                }
+            )
+        }
+
+        return nil
+    }
+
     init() {
         load()
     }

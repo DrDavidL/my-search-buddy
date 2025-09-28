@@ -4,23 +4,28 @@ import QuickLookUI
 private final class QuickLookCoordinator: NSResponder, QLPreviewPanelDelegate, QLPreviewPanelDataSource {
     static let shared = QuickLookCoordinator()
 
-    private var items: [URL] = []
-    private var scopedAccess: [URL: Bool] = [:]
+    private struct ScopedPreviewItem {
+        let url: URL
+        let stopAccess: (() -> Void)?
+    }
+
+    private var items: [ScopedPreviewItem] = []
     private weak var previousResponder: NSResponder?
 
-    func present(paths: [String]) {
+    func present(paths: [String], using bookmarkStore: BookmarkStore) {
         releaseScopedAccess()
         items = paths.compactMap { path in
-            let url = URL(fileURLWithPath: path)
-            if url.startAccessingSecurityScopedResource() {
-                scopedAccess[url] = true
-            } else {
-                scopedAccess[url] = false
+            if let scoped = bookmarkStore.scopedURL(forAbsolutePath: path) {
+                return ScopedPreviewItem(url: scoped.url, stopAccess: scoped.stopAccess)
             }
-            return url
+            return ScopedPreviewItem(url: URL(fileURLWithPath: path), stopAccess: nil)
         }
 
-        guard let panel = QLPreviewPanel.shared(), let window = NSApp.keyWindow else { return }
+        guard !items.isEmpty else { return }
+        guard let panel = QLPreviewPanel.shared(), let window = NSApp.keyWindow else {
+            releaseScopedAccess()
+            return
+        }
 
         previousResponder = window.nextResponder
         window.nextResponder = self
@@ -51,23 +56,23 @@ private final class QuickLookCoordinator: NSResponder, QLPreviewPanelDelegate, Q
     }
 
     func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> QLPreviewItem {
-        items[index] as NSURL
+        items[index].url as NSURL
     }
 
     private func releaseScopedAccess() {
-        for (url, hadAccess) in scopedAccess where hadAccess {
-            url.stopAccessingSecurityScopedResource()
+        for item in items {
+            item.stopAccess?()
         }
-        scopedAccess.removeAll()
+        items.removeAll()
     }
 }
 
-func quickLook(path: String) {
-    QuickLookCoordinator.shared.present(paths: [path])
+func quickLook(path: String, bookmarkStore: BookmarkStore) {
+    QuickLookCoordinator.shared.present(paths: [path], using: bookmarkStore)
 }
 
-func quickLook(paths: [String]) {
-    QuickLookCoordinator.shared.present(paths: paths)
+func quickLook(paths: [String], bookmarkStore: BookmarkStore) {
+    QuickLookCoordinator.shared.present(paths: paths, using: bookmarkStore)
 }
 
 func revealInFinder(path: String) {

@@ -12,18 +12,20 @@ final class SearchViewModel: ObservableObject {
     var activeRootPaths: [String] = []
 
     private var searchTask: Task<Void, Never>?
+    private let searchExecutor = FinderCoreSearchExecutor()
 
-    func runSearch() {
+    func runSearch(limit: Int? = nil) {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             results = []
+            isSearching = false
             return
         }
 
         searchTask?.cancel()
         searchTask = Task { [weak self] in
             guard let self else { return }
-            await self.performSearch(term: trimmed, scope: self.scope)
+            await self.performSearch(term: trimmed, scope: self.scope, limit: limit)
         }
     }
 
@@ -33,15 +35,22 @@ final class SearchViewModel: ObservableObject {
         query = ""
     }
 
-    private func performSearch(term: String, scope: FinderCore.Scope) async {
+    private func performSearch(term: String, scope: FinderCore.Scope, limit: Int?) async {
         isSearching = true
         let currentSort = sort
-        let hits = await Task.detached(priority: .userInitiated) {
-            FinderCore.search(term, scope: scope, limit: 200, sortByModifiedDescending: currentSort == .modified)
-        }.value
-        guard !Task.isCancelled else { return }
+        let resultLimit = limit ?? 200
+        let hits = await searchExecutor.search(
+            term: term,
+            scope: scope,
+            limit: resultLimit,
+            sortByModifiedDescending: currentSort == .modified
+        )
+        guard !Task.isCancelled else {
+            isSearching = false
+            return
+        }
         let filtered = filterHits(hits)
-        results = filtered
+        results = Array(filtered.prefix(resultLimit))
         isSearching = false
     }
 
@@ -56,4 +65,20 @@ final class SearchViewModel: ObservableObject {
 enum SortOption: Hashable {
     case score
     case modified
+}
+
+actor FinderCoreSearchExecutor {
+    func search(
+        term: String,
+        scope: FinderCore.Scope,
+        limit: Int,
+        sortByModifiedDescending: Bool
+    ) -> [FinderCore.Hit] {
+        FinderCore.search(
+            term,
+            scope: scope,
+            limit: Int32(limit),
+            sortByModifiedDescending: sortByModifiedDescending
+        )
+    }
 }

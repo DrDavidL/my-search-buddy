@@ -14,6 +14,8 @@
 		1AC5F0041C23456800ABCDEF /* ResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0051C23456800ABCDEF /* ResultRow.swift */; };
 		1AC5F0061C23456800ABCDEF /* QuickLookHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */; };
 		1AFED0011C24567800ABCDE0 /* IndexCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AFED0001C24567800ABCDE0 /* IndexCoordinator.swift */; };
+		1B0E1F011D5C123400000001 /* ContentCoverageSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0E1F001D5C123400000001 /* ContentCoverageSettings.swift */; };
+		1B0E1F031D5C123400000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0E1F021D5C123400000001 /* SettingsView.swift */; };
 		1A3B3F281BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */; };
 		1A3B3F2C1BE9D4F200C5A7C5 /* FinderCoreFFI in Frameworks */ = {isa = PBXBuildFile; productRef = 1A3B3F2B1BE9D4F200C5A7C5 /* FinderCoreFFI */; };
 /* End PBXBuildFile section */
@@ -27,6 +29,8 @@
 		1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		1AC5F0051C23456800ABCDEF /* ResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultRow.swift; sourceTree = "<group>"; };
 		1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookHelper.swift; sourceTree = "<group>"; };
+		1B0E1F001D5C123400000001 /* ContentCoverageSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentCoverageSettings.swift; sourceTree = "<group>"; };
+		1B0E1F021D5C123400000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1A3B3F1C1BE9D4F200C5A7C5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1A3B3F1D1BE9D4F200C5A7C5 /* MySearchBuddy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MySearchBuddy.entitlements; sourceTree = "<group>"; };
 		1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -70,6 +74,8 @@
 				1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */,
 				1AC5F0051C23456800ABCDEF /* ResultRow.swift */,
 				1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */,
+				1B0E1F001D5C123400000001 /* ContentCoverageSettings.swift */,
+				1B0E1F021D5C123400000001 /* SettingsView.swift */,
 				1A3B3F1B1BE9D4F200C5A7C5 /* BookmarkStore.swift */,
 				1A3B3F1C1BE9D4F200C5A7C5 /* Info.plist */,
 				1A3B3F1D1BE9D4F200C5A7C5 /* MySearchBuddy.entitlements */,
@@ -160,6 +166,8 @@
 				1AC5F0041C23456800ABCDEF /* ResultRow.swift in Sources */,
 				1AC5F0021C23456800ABCDEF /* SearchViewModel.swift in Sources */,
 				1AFED0011C24567800ABCDE0 /* IndexCoordinator.swift in Sources */,
+				1B0E1F011D5C123400000001 /* ContentCoverageSettings.swift in Sources */,
+				1B0E1F031D5C123400000001 /* SettingsView.swift in Sources */,
 				1A3B3F221BE9D4F200C5A7C5 /* BookmarkStore.swift in Sources */,
 			);
 		};

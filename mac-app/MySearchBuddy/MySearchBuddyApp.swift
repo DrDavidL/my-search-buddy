@@ -12,6 +12,9 @@ struct MySearchBuddyApp: App {
                 .environmentObject(bookmarkStore)
                 .environmentObject(coverageSettings)
         }
+        .commands {
+            QuickLookCommands()
+        }
         Settings {
             SettingsView()
                 .environmentObject(coverageSettings)
