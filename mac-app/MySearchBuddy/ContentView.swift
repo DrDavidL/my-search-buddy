@@ -26,7 +26,7 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             mainContent
-                .blur(shouldShowPaywall ? 4 : 0)
+                .blur(radius: shouldShowPaywall ? 4 : 0)
                 .disabled(shouldShowPaywall)
 
             if !purchaseManager.isReady {
