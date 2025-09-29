@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var coverageSettings: ContentCoverageSettings
+    @EnvironmentObject private var indexCoordinator: IndexCoordinator
 
     var body: some View {
         Form {
@@ -34,6 +35,15 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                Toggle("Schedule automatic updates between 2–4 AM", isOn: $indexCoordinator.scheduleWindowEnabled)
+                    .toggleStyle(.switch)
+
+                if let nextRun = indexCoordinator.nextScheduledRun {
+                    Text("Next scheduled run: \(scheduleFormatter.string(from: nextRun))")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding(20)
@@ -52,9 +62,17 @@ struct SettingsView: View {
     private var tailText: String {
         String(format: "%.1f%%", coverageSettings.tailPercentage)
     }
+
+    private var scheduleFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }
 }
 
 #Preview {
     SettingsView()
         .environmentObject(ContentCoverageSettings())
+        .environmentObject(IndexCoordinator())
 }

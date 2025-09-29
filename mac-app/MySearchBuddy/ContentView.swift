@@ -6,7 +6,7 @@ struct ContentView: View {
     @EnvironmentObject private var bookmarkStore: BookmarkStore
     @EnvironmentObject private var coverageSettings: ContentCoverageSettings
     @EnvironmentObject private var purchaseManager: PurchaseManager
-    @StateObject private var indexCoordinator = IndexCoordinator()
+    @EnvironmentObject private var indexCoordinator: IndexCoordinator
     @StateObject private var searchViewModel = SearchViewModel()
 
     @FocusState private var searchFieldIsFocused: Bool

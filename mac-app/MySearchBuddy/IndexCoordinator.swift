@@ -14,12 +14,63 @@ final class IndexCoordinator: ObservableObject {
     private let indexDirectory: URL
     private let defaults = UserDefaults.standard
     private let lastIndexDefaultsKey = "indexCoordinator.lastIndexDate"
+    private let bucketProgressKey = "indexCoordinator.bucketProgress"
+    private let scheduleEnabledKey = "indexCoordinator.scheduleWindowEnabled"
     private let autoIndexInterval: TimeInterval = 60
     private var lastAutoIndexAttempt: Date?
+    private var scheduledWorkItem: DispatchWorkItem?
+
+    @Published var scheduleWindowEnabled: Bool = false {
+        didSet {
+            defaults.set(scheduleWindowEnabled, forKey: scheduleEnabledKey)
+            if !scheduleWindowEnabled {
+                cancelScheduledRun()
+            }
+        }
+    }
+    @Published private(set) var nextScheduledRun: Date?
 
     enum IndexMode {
         case incremental
         case full
+    }
+
+    private enum RecencyBucket: Int, CaseIterable {
+        case last3Months
+        case last6Months
+        case last12Months
+        case older
+
+        static let secondsInDay: TimeInterval = 24 * 60 * 60
+
+        static func bucket(for age: TimeInterval) -> RecencyBucket {
+            if age <= 90 * secondsInDay {
+                return .last3Months
+            } else if age <= 180 * secondsInDay {
+                return .last6Months
+            } else if age <= 365 * secondsInDay {
+                return .last12Months
+            } else {
+                return .older
+            }
+        }
+
+        var startStatus: String {
+            switch self {
+            case .last3Months: return "Indexing last 90 days…"
+            case .last6Months: return "Indexing last 6 months…"
+            case .last12Months: return "Indexing last 12 months…"
+            case .older: return "Indexing older files…"
+            }
+        }
+    }
+
+    private struct PendingFile {
+        let url: URL
+        let size: Int64
+        let modificationDate: Date
+        let isCloudItem: Bool
+        let downloadStatus: URLUbiquitousItemDownloadingStatus
     }
 
     init() {
@@ -30,6 +81,7 @@ final class IndexCoordinator: ObservableObject {
         if let storedDate = defaults.object(forKey: lastIndexDefaultsKey) as? Date {
             lastIndexDate = storedDate
         }
+        scheduleWindowEnabled = defaults.bool(forKey: scheduleEnabledKey)
     }
 
     static func defaultIndexDirectory() -> URL {
@@ -44,9 +96,15 @@ final class IndexCoordinator: ObservableObject {
         samplingPolicy = policy
     }
 
-    func startIndexing(roots: [URL], mode: IndexMode = .incremental) {
+    func startIndexing(roots: [URL], mode: IndexMode = .incremental, scheduled: Bool = false) {
         guard !roots.isEmpty else { return }
         cancel()
+
+        if scheduleWindowEnabled && !scheduled && mode == .incremental {
+            if scheduleIndexingIfNeeded(roots: roots, mode: mode) {
+                return
+            }
+        }
 
         isIndexing = true
         status = mode == .full ? "Rebuilding index…" : "Checking for updates…"
@@ -72,7 +130,8 @@ final class IndexCoordinator: ObservableObject {
                     root,
                     startingFrom: totalProcessed,
                     policy: policy,
-                    since: baseline
+                    since: baseline,
+                    mode: mode
                 )
                 totalProcessed += processed
             }
@@ -104,6 +163,7 @@ final class IndexCoordinator: ObservableObject {
         if isIndexing {
             status = "Cancelling…"
         }
+        cancelScheduledRun()
     }
 
     @MainActor
@@ -124,6 +184,63 @@ final class IndexCoordinator: ObservableObject {
         startIndexing(roots: roots, mode: .incremental)
     }
 
+    private func cancelScheduledRun() {
+        scheduledWorkItem?.cancel()
+        scheduledWorkItem = nil
+        nextScheduledRun = nil
+    }
+
+    private func isWithinScheduleWindow(_ date: Date) -> Bool {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        guard let hour = components.hour, let minute = components.minute else { return false }
+        let totalMinutes = hour * 60 + minute
+        let startMinutes = 2 * 60
+        let endMinutes = 4 * 60
+        return totalMinutes >= startMinutes && totalMinutes < endMinutes
+    }
+
+    private func nextScheduleDate(after date: Date) -> Date {
+        let calendar = Calendar.current
+        var comps = calendar.dateComponents([.year, .month, .day], from: date)
+        comps.hour = 2
+        comps.minute = 0
+        comps.second = 0
+        var next = calendar.date(from: comps) ?? date
+        if next <= date {
+            next = calendar.date(byAdding: .day, value: 1, to: next) ?? date
+        }
+        return next
+    }
+
+    private func scheduleIndexingIfNeeded(roots: [URL], mode: IndexMode) -> Bool {
+        let now = Date()
+        if isWithinScheduleWindow(now) {
+            return false
+        }
+
+        let target = nextScheduleDate(after: now)
+        cancelScheduledRun()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.nextScheduledRun = nil
+            self.startIndexing(roots: roots, mode: mode, scheduled: true)
+        }
+        scheduledWorkItem = workItem
+        nextScheduledRun = target
+
+        DispatchQueue.main.async {
+            let formatter = DateFormatter()
+            formatter.timeStyle = .short
+            formatter.dateStyle = .medium
+            self.status = "Scheduled for \(formatter.string(from: target))"
+        }
+
+        let delay = target.timeIntervalSinceNow
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay), execute: workItem)
+        return true
+    }
+
     func isCloudPlaceholder(path: String) -> Bool {
         cloudPlaceholders.contains(path)
     }
@@ -134,8 +251,7 @@ final class IndexCoordinator: ObservableObject {
     }
 
     private func process(
-        url: URL,
-        keys: Set<URLResourceKey>,
+        pending: PendingFile,
         cutoff: Date?,
         processed: inout Int,
         lastCommit: inout Date,
@@ -144,43 +260,33 @@ final class IndexCoordinator: ObservableObject {
         var didUpdate = false
 
         autoreleasepool {
-            guard let values = try? url.resourceValues(forKeys: keys), values.isDirectory != true else {
+            if let cutoff, pending.modificationDate <= cutoff {
                 return
             }
 
-            let sizeValue = Int64(values.fileSize ?? 0)
-
-            let modificationDate = values.contentModificationDate ?? Date()
-            if let cutoff, modificationDate <= cutoff {
-                return
-            }
-
-            let isCloudItem = values.isUbiquitousItem ?? false
-            let downloadStatus = values.ubiquitousItemDownloadingStatus ?? .notDownloaded
-            let isLocalCopy = !isCloudItem || downloadStatus == .current
-            let cloudPlaceholder = isCloudItem && !isLocalCopy
+            let cloudPlaceholder = pending.isCloudItem && pending.downloadStatus != .current
 
             if cloudPlaceholder {
                 DispatchQueue.main.async { [weak self] in
-                    self?.cloudPlaceholders.insert(url.path)
+                    self?.cloudPlaceholders.insert(pending.url.path)
                 }
             } else {
                 DispatchQueue.main.async { [weak self] in
-                    self?.cloudPlaceholders.remove(url.path)
+                    self?.cloudPlaceholders.remove(pending.url.path)
                 }
             }
 
-            if sizeValue <= 0 && !cloudPlaceholder {
+            if pending.size <= 0 && !cloudPlaceholder {
                 return
             }
 
-            let effectiveSize = max(sizeValue, 0)
+            let effectiveSize = max(pending.size, 0)
 
             let meta = FinderCore.FileMeta(
-                path: url.path,
-                name: url.lastPathComponent,
-                ext: url.pathExtension.isEmpty ? nil : url.pathExtension,
-                modifiedAt: Int64(modificationDate.timeIntervalSince1970),
+                path: pending.url.path,
+                name: pending.url.lastPathComponent,
+                ext: pending.url.pathExtension.isEmpty ? nil : pending.url.pathExtension,
+                modifiedAt: Int64(pending.modificationDate.timeIntervalSince1970),
                 size: UInt64(effectiveSize),
                 inode: 0,
                 dev: 0
@@ -194,7 +300,7 @@ final class IndexCoordinator: ObservableObject {
             if cloudPlaceholder {
                 content = nil
             } else {
-                content = loadContentIfPossible(from: url, size: Int64(effectiveSize), policy: policy)
+                content = loadContentIfPossible(from: pending.url, size: Int64(effectiveSize), policy: policy)
             }
 
             if FinderCore.addOrUpdate(meta: meta, content: content) {
@@ -216,7 +322,8 @@ final class IndexCoordinator: ObservableObject {
         _ root: URL,
         startingFrom totalProcessed: Int,
         policy: ContentSamplingPolicy,
-        since cutoff: Date?
+        since cutoff: Date?,
+        mode: IndexMode
     ) async -> Int {
         var processed = 0
         guard root.startAccessingSecurityScopedResource() else { return 0 }
@@ -235,24 +342,76 @@ final class IndexCoordinator: ObservableObject {
             return 0
         }
 
+        var bucketed: [[PendingFile]] = Array(repeating: [], count: RecencyBucket.allCases.count)
+        let now = Date()
+
         var lastCommit = Date()
+
         while let entry = enumerator.nextObject() as? URL {
             if Task.isCancelled { break }
 
-            if process(url: entry,
-                       keys: keys,
-                       cutoff: cutoff,
-                       processed: &processed,
-                       lastCommit: &lastCommit,
-                       policy: policy) {
-                let runningTotal = totalProcessed + processed
-                if processed % 50 == 0 {
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self else { return }
-                        self.filesIndexed = runningTotal
-                        self.status = "Indexed \(runningTotal) files…"
+            guard let values = try? entry.resourceValues(forKeys: keys), values.isDirectory != true else {
+                continue
+            }
+
+            let modificationDate = values.contentModificationDate ?? now
+            let age = now.timeIntervalSince(modificationDate)
+            let bucket = RecencyBucket.bucket(for: age)
+
+            let size = Int64(values.fileSize ?? 0)
+            let isCloudItem = values.isUbiquitousItem ?? false
+            let downloadStatus = values.ubiquitousItemDownloadingStatus ?? .notDownloaded
+
+            let pending = PendingFile(
+                url: entry,
+                size: size,
+                modificationDate: modificationDate,
+                isCloudItem: isCloudItem,
+                downloadStatus: downloadStatus
+            )
+
+            bucketed[bucket.rawValue].append(pending)
+        }
+
+        let rootKey = root.path
+        let startBucketIndex = mode == .full ? progressIndex(for: rootKey) : 0
+
+        var cancelled = false
+
+        bucketLoop: for bucket in RecencyBucket.allCases {
+            if Task.isCancelled { break }
+            if bucket.rawValue < startBucketIndex { continue }
+            let files = bucketed[bucket.rawValue]
+            if files.isEmpty { continue }
+
+            await MainActor.run {
+                self.status = bucket.startStatus
+            }
+
+            for pending in files {
+                if Task.isCancelled {
+                    cancelled = true
+                    break bucketLoop
+                }
+
+                if process(pending: pending,
+                           cutoff: cutoff,
+                           processed: &processed,
+                           lastCommit: &lastCommit,
+                           policy: policy) {
+                    let runningTotal = totalProcessed + processed
+                    if processed % 50 == 0 {
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self else { return }
+                            self.filesIndexed = runningTotal
+                            self.status = "Indexed \(runningTotal) files…"
+                        }
                     }
                 }
+            }
+
+            if mode == .full {
+                setProgressIndex(bucket.rawValue + 1, for: rootKey)
             }
         }
 
@@ -265,6 +424,11 @@ final class IndexCoordinator: ObservableObject {
                 self.status = "Indexed \(finalTotal) files…"
             }
         }
+
+        if mode == .full && !cancelled {
+            setProgressIndex(nil, for: rootKey)
+        }
+
         return processed
     }
 
@@ -279,6 +443,23 @@ final class IndexCoordinator: ObservableObject {
         lastIndexDate = nil
         defaults.removeObject(forKey: lastIndexDefaultsKey)
         cloudPlaceholders.removeAll()
+        defaults.removeObject(forKey: bucketProgressKey)
+        cancelScheduledRun()
+    }
+
+    private func progressIndex(for root: String) -> Int {
+        let dict = defaults.dictionary(forKey: bucketProgressKey) as? [String: Int] ?? [:]
+        return dict[root] ?? 0
+    }
+
+    private func setProgressIndex(_ index: Int?, for root: String) {
+        var dict = defaults.dictionary(forKey: bucketProgressKey) as? [String: Int] ?? [:]
+        if let index {
+            dict[root] = index
+        } else {
+            dict.removeValue(forKey: root)
+        }
+        defaults.set(dict, forKey: bucketProgressKey)
     }
 
     private func loadContentIfPossible(
