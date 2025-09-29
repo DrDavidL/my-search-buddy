@@ -107,6 +107,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1A3B3F241BE9D4F200C5A7C5 /* Build configuration list for PBXNativeTarget "MySearchBuddy" */;
 			buildPhases = (
+				1C8128262B8B9CDE0043210F /* Build finder-core */,
 				1A3B3F111BE9D4F200C5A7C5 /* Sources */,
 				1A3B3F121BE9D4F200C5A7C5 /* Frameworks */,
 				1A3B3F131BE9D4F200C5A7C5 /* Resources */,
@@ -165,6 +166,29 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		1C8128262B8B9CDE0043210F /* Build finder-core */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../finder-core/Cargo.toml",
+			);
+			name = "Build finder-core";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/../target/release/libfinder_core.dylib",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd \"$SRCROOT/..\"\n./scripts/build_finder_core_universal.sh\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1A3B3F111BE9D4F200C5A7C5 /* Sources */ = {
