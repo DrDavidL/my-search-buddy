@@ -30,3 +30,11 @@ lipo -create -output "$UNIVERSAL_LIB" "$X86_LIB" "$ARM_LIB"
 
 echo "Copying universal dylib to target/release"
 cp "$UNIVERSAL_LIB" target/release/libfinder_core.dylib
+
+echo "Copying universal dylib to mac-app/target/release"
+mkdir -p mac-app/target/release
+cp "$UNIVERSAL_LIB" mac-app/target/release/libfinder_core.dylib
+
+echo "Copying universal dylib to mac-app/target/debug"
+mkdir -p mac-app/target/debug
+cp "$UNIVERSAL_LIB" mac-app/target/debug/libfinder_core.dylib
