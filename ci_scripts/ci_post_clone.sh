@@ -9,3 +9,5 @@ else
   echo "Updating Rust toolchain"
   rustup update
 fi
+
+rustup default stable

@@ -40,3 +40,6 @@ corpora/
 !mac-app/Packages/FinderCoreFFI/
 !mac-app/Packages/FinderCoreFFI/**
 mac-app/Packages/FinderCoreFFI/.build/
+
+/.rustup/
+/.cargo/
