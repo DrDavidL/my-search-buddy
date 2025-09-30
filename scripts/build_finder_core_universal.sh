@@ -44,7 +44,7 @@ echo "Building finder-core (arm64)"
 cargo build -p finder-core --release --target aarch64-apple-darwin --target-dir "$REPO_ROOT/target"
 
 UNIVERSAL_DIR="$REPO_ROOT/target/universal/release"
-mkdir -p "$UNIVERSAL_DIR" "$REPO_ROOT/target/release" "$REPO_ROOT/mac-app/target/release" "$REPO_ROOT/mac-app/target/debug"
+mkdir -p "$UNIVERSAL_DIR" "$REPO_ROOT/target/release"
 
 X86_LIB="$REPO_ROOT/target/x86_64-apple-darwin/release/libfinder_core.dylib"
 ARM_LIB="$REPO_ROOT/target/aarch64-apple-darwin/release/libfinder_core.dylib"
@@ -59,6 +59,24 @@ echo "Creating universal libfinder_core.dylib"
 lipo -create -output "$UNIVERSAL_LIB" "$X86_LIB" "$ARM_LIB"
 
 echo "Distributing libfinder_core.dylib"
-for dest in "$REPO_ROOT/target/release" "$REPO_ROOT/mac-app/target/release" "$REPO_ROOT/mac-app/target/debug"; do
-  cp "$UNIVERSAL_LIB" "$dest/libfinder_core.dylib"
+cp "$UNIVERSAL_LIB" "$REPO_ROOT/target/release/libfinder_core.dylib"
+
+# Copies into additional convenience locations are best-effort only. Xcode's
+# sandbox blocks writes to paths that are not declared as script outputs, so we
+# skip them quietly when we do not have permission (local manual invocations
+# can still populate them).
+OPTIONAL_DESTINATIONS=(
+  "$REPO_ROOT/target/debug"
+  "$REPO_ROOT/mac-app/target/release"
+  "$REPO_ROOT/mac-app/target/debug"
+)
+
+for dest in "${OPTIONAL_DESTINATIONS[@]}"; do
+  if ! mkdir -p "$dest" >/dev/null 2>&1; then
+    echo "warning: skipping optional copy to $dest (mkdir failed; likely sandbox restrictions)" >&2
+    continue
+  fi
+  if ! cp "$UNIVERSAL_LIB" "$dest/libfinder_core.dylib" >/dev/null 2>&1; then
+    echo "warning: skipping optional copy to $dest (copy failed; likely sandbox restrictions)" >&2
+  fi
 done
