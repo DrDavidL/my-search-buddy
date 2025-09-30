@@ -9,6 +9,11 @@ export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
 mkdir -p "$CARGO_HOME" "$RUSTUP_HOME"
 export PATH="$CARGO_HOME/bin:$PATH"
 
+# Source cargo environment for Xcode Cloud compatibility
+if [ -f "$CARGO_HOME/env" ]; then
+  source "$CARGO_HOME/env"
+fi
+
 if ! command -v cargo >/dev/null 2>&1; then
   echo "cargo not found. Run ci_scripts/ci_post_clone.sh first or ensure Rust is installed." >&2
   exit 1
