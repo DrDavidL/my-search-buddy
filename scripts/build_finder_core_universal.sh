@@ -11,11 +11,52 @@ export PATH="$CARGO_HOME/bin:$PATH"
 
 # Source cargo environment for Xcode Cloud compatibility
 if [ -f "$CARGO_HOME/env" ]; then
+  # shellcheck disable=SC1090
   source "$CARGO_HOME/env"
 fi
 
-if ! command -v cargo >/dev/null 2>&1; then
-  echo "cargo not found. Run ci_scripts/ci_post_clone.sh first or ensure Rust is installed." >&2
+ensure_rust_toolchain() {
+  if command -v cargo >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "cargo not found. Attempting to install Rust toolchain." >&2
+
+  install_script() {
+    if ! command -v curl >/dev/null 2>&1; then
+      echo "curl not available; cannot install Rust automatically." >&2
+      return 1
+    fi
+    # Install stable toolchain silently; rustup installer respects CARGO_HOME/RUSTUP_HOME.
+    if ! curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable; then
+      echo "Rust installer failed; see output above." >&2
+      return 1
+    fi
+    return 0
+  }
+
+  if command -v rustup >/dev/null 2>&1; then
+    if ! rustup update stable; then
+      echo "rustup update failed." >&2
+      return 1
+    fi
+  else
+    install_script || return 1
+  fi
+
+  if [ -f "$CARGO_HOME/env" ]; then
+    # shellcheck disable=SC1090
+    source "$CARGO_HOME/env"
+  fi
+
+  if ! command -v cargo >/dev/null 2>&1; then
+    echo "Rust installation completed but cargo still unavailable." >&2
+    return 1
+  fi
+}
+
+if ! ensure_rust_toolchain; then
+  echo "Unable to locate or install Rust toolchain. See messages above." >&2
   exit 1
 fi
 
