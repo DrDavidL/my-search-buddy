@@ -37,21 +37,22 @@ final class SearchViewModel: ObservableObject {
 
     private func performSearch(term: String, scope: FinderCore.Scope, limit: Int?) async {
         isSearching = true
+        defer { isSearching = false }
+
         let currentSort = sort
         let resultLimit = limit ?? 200
+
         let hits = await searchExecutor.search(
             term: term,
             scope: scope,
             limit: resultLimit,
             sortByModifiedDescending: currentSort == .modified
         )
-        guard !Task.isCancelled else {
-            isSearching = false
-            return
-        }
+
+        guard !Task.isCancelled else { return }
+
         let filtered = filterHits(hits)
         results = Array(filtered.prefix(resultLimit))
-        isSearching = false
     }
 
     private func filterHits(_ hits: [FinderCore.Hit]) -> [FinderCore.Hit] {

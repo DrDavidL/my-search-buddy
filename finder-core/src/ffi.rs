@@ -193,15 +193,25 @@ pub extern "C" fn fc_free_results(results: *mut FCResults) {
     if results.is_null() {
         return;
     }
-    let results = unsafe { &mut *results };
-    if results.hits.is_null() || results.count <= 0 {
-        results.hits = ptr::null_mut();
-        results.count = 0;
+
+    let results_ref = unsafe { &mut *results };
+
+    // Guard against double-free by checking both conditions
+    if results_ref.hits.is_null() || results_ref.count <= 0 {
+        results_ref.hits = ptr::null_mut();
+        results_ref.count = 0;
         return;
     }
 
-    let count = results.count as usize;
-    let slice_ptr = ptr::slice_from_raw_parts_mut(results.hits, count);
+    let count = results_ref.count as usize;
+    let hits_ptr = results_ref.hits;
+
+    // Immediately null out to prevent double-free
+    results_ref.hits = ptr::null_mut();
+    results_ref.count = 0;
+
+    // Now safely free the memory
+    let slice_ptr = ptr::slice_from_raw_parts_mut(hits_ptr, count);
     let boxed: Box<[FCHit]> = unsafe { Box::from_raw(slice_ptr) };
 
     for hit in boxed.into_vec() {
@@ -216,9 +226,6 @@ pub extern "C" fn fc_free_results(results: *mut FCResults) {
             }
         }
     }
-
-    results.hits = ptr::null_mut();
-    results.count = 0;
 }
 
 fn to_string(ptr: *const c_char) -> Option<String> {

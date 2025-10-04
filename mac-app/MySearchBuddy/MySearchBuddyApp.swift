@@ -18,6 +18,7 @@ struct MySearchBuddyApp: App {
         }
         .commands {
             QuickLookCommands()
+            FileCommands()
         }
         Settings {
             SettingsView()

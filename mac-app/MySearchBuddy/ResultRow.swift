@@ -8,31 +8,58 @@ struct ResultRow: View {
     private let dateFormatter = RelativeDateTimeFormatter()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(hit.name)
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                Text(hit.path)
-                    .font(.system(.footnote, design: .monospaced))
-                    .lineLimit(1)
-                    .truncationMode(.head)
-                    .foregroundStyle(.secondary)
+                // File icon (system or cloud)
                 if isCloudPlaceholder {
-                    Label("Cloud", systemImage: "icloud.and.arrow.down")
-                        .labelStyle(.iconOnly)
-                        .foregroundStyle(Color.orange)
-                        .help("Stored in cloud — download before preview")
+                    Image(systemName: "icloud.and.arrow.down")
+                        .foregroundStyle(.orange)
+                        .help("Cloud file — download required for preview/open")
+                } else {
+                    Image(systemName: fileIcon)
+                        .foregroundStyle(.secondary)
                 }
+
+                // File name with extension badge
+                HStack(spacing: 4) {
+                    Text(hit.name)
+                        .font(.system(.body, weight: .medium))
+                        .lineLimit(1)
+
+                    if let ext = fileExtension, !ext.isEmpty {
+                        Text(ext.uppercased())
+                            .font(.system(.caption2, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(extensionColor)
+                            .cornerRadius(3)
+                    }
+                }
+
                 Spacer()
+
+                // File size
                 Text(formatSize(bytes: hit.size))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .frame(minWidth: 60, alignment: .trailing)
+
+                // Modified date
                 Text(formatDate(seconds: hit.mtime))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .frame(minWidth: 80, alignment: .trailing)
             }
+
+            // Full path
+            Text(hit.path)
+                .font(.system(.caption, design: .monospaced))
+                .lineLimit(1)
+                .truncationMode(.head)
+                .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
     }
 
     private func formatDate(seconds: Int64) -> String {
@@ -50,6 +77,47 @@ struct ResultRow: View {
 
     private var isCloudPlaceholder: Bool {
         indexCoordinator.isCloudPlaceholder(path: hit.path)
+    }
+
+    private var fileExtension: String? {
+        let components = hit.name.components(separatedBy: ".")
+        return components.count > 1 ? components.last : nil
+    }
+
+    private var fileIcon: String {
+        guard let ext = fileExtension?.lowercased() else { return "doc" }
+
+        switch ext {
+        case "pdf": return "doc.richtext"
+        case "doc", "docx": return "doc.text"
+        case "xls", "xlsx": return "tablecells"
+        case "ppt", "pptx": return "rectangle.on.rectangle.angled"
+        case "txt", "md": return "doc.plaintext"
+        case "jpg", "jpeg", "png", "gif", "heic": return "photo"
+        case "mp4", "mov", "avi": return "video"
+        case "mp3", "wav", "aiff": return "music.note"
+        case "zip", "tar", "gz": return "doc.zipper"
+        case "swift", "rs", "py", "js", "ts": return "chevron.left.forwardslash.chevron.right"
+        default: return "doc"
+        }
+    }
+
+    private var extensionColor: Color {
+        guard let ext = fileExtension?.lowercased() else { return .gray }
+
+        switch ext {
+        case "pdf": return .red
+        case "doc", "docx": return .blue
+        case "xls", "xlsx": return .green
+        case "ppt", "pptx": return .orange
+        case "txt", "md": return .gray
+        case "jpg", "jpeg", "png", "gif", "heic": return .purple
+        case "mp4", "mov", "avi": return .pink
+        case "mp3", "wav", "aiff": return .cyan
+        case "zip", "tar", "gz": return .brown
+        case "swift", "rs", "py", "js", "ts": return .indigo
+        default: return .gray
+        }
     }
 }
 

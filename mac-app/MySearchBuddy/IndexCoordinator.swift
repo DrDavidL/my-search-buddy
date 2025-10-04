@@ -18,6 +18,7 @@ final class IndexCoordinator: ObservableObject {
     private let scheduleEnabledKey = "indexCoordinator.scheduleWindowEnabled"
     private let autoIndexInterval: TimeInterval = 60
     private var lastAutoIndexAttempt: Date?
+    private let scheduleQueue = DispatchQueue(label: "com.mysearchbuddy.scheduleQueue")
     private var scheduledWorkItem: DispatchWorkItem?
 
     @Published var scheduleWindowEnabled: Bool = false {
@@ -185,9 +186,13 @@ final class IndexCoordinator: ObservableObject {
     }
 
     private func cancelScheduledRun() {
-        scheduledWorkItem?.cancel()
-        scheduledWorkItem = nil
-        nextScheduledRun = nil
+        scheduleQueue.sync {
+            scheduledWorkItem?.cancel()
+            scheduledWorkItem = nil
+        }
+        Task { @MainActor in
+            nextScheduledRun = nil
+        }
     }
 
     private func isWithinScheduleWindow(_ date: Date) -> Bool {
@@ -221,19 +226,25 @@ final class IndexCoordinator: ObservableObject {
 
         let target = nextScheduleDate(after: now)
         cancelScheduledRun()
+
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            self.nextScheduledRun = nil
-            self.startIndexing(roots: roots, mode: mode, scheduled: true)
+            Task { @MainActor in
+                self.nextScheduledRun = nil
+                self.startIndexing(roots: roots, mode: mode, scheduled: true)
+            }
         }
-        scheduledWorkItem = workItem
-        nextScheduledRun = target
 
-        DispatchQueue.main.async {
+        scheduleQueue.sync {
+            scheduledWorkItem = workItem
+        }
+
+        Task { @MainActor in
+            nextScheduledRun = target
             let formatter = DateFormatter()
             formatter.timeStyle = .short
             formatter.dateStyle = .medium
-            self.status = "Scheduled for \(formatter.string(from: target))"
+            status = "Scheduled for \(formatter.string(from: target))"
         }
 
         let delay = target.timeIntervalSinceNow
@@ -247,7 +258,11 @@ final class IndexCoordinator: ObservableObject {
 
     private func ensureIndexDirectoryExists() {
         let fm = FileManager.default
-        try? fm.createDirectory(at: indexDirectory, withIntermediateDirectories: true)
+        do {
+            try fm.createDirectory(at: indexDirectory, withIntermediateDirectories: true)
+        } catch {
+            NSLog("[Index] Failed to create index directory at %@: %@", indexDirectory.path, error.localizedDescription)
+        }
     }
 
     private func process(
@@ -265,14 +280,15 @@ final class IndexCoordinator: ObservableObject {
             }
 
             let cloudPlaceholder = pending.isCloudItem && pending.downloadStatus != .current
+            let urlPath = pending.url.path
 
             if cloudPlaceholder {
-                DispatchQueue.main.async { [weak self] in
-                    self?.cloudPlaceholders.insert(pending.url.path)
+                Task { @MainActor [weak self] in
+                    self?.cloudPlaceholders.insert(urlPath)
                 }
             } else {
-                DispatchQueue.main.async { [weak self] in
-                    self?.cloudPlaceholders.remove(pending.url.path)
+                Task { @MainActor [weak self] in
+                    self?.cloudPlaceholders.remove(urlPath)
                 }
             }
 
@@ -401,7 +417,7 @@ final class IndexCoordinator: ObservableObject {
                            policy: policy) {
                     let runningTotal = totalProcessed + processed
                     if processed % 50 == 0 {
-                        DispatchQueue.main.async { [weak self] in
+                        Task { @MainActor [weak self] in
                             guard let self else { return }
                             self.filesIndexed = runningTotal
                             self.status = "Indexed \(runningTotal) files…"
@@ -435,9 +451,19 @@ final class IndexCoordinator: ObservableObject {
     func resetIndex() {
         cancel()
         FinderCore.close()
-        try? FileManager.default.removeItem(at: indexDirectory)
+
+        do {
+            try FileManager.default.removeItem(at: indexDirectory)
+        } catch {
+            NSLog("[Index] Failed to remove index directory: %@", error.localizedDescription)
+        }
+
         ensureIndexDirectoryExists()
-        FinderCore.initIndex(at: indexDirectory.path)
+
+        if !FinderCore.initIndex(at: indexDirectory.path) {
+            NSLog("[Index] Failed to reinitialize index after reset")
+        }
+
         filesIndexed = 0
         status = "Index reset"
         lastIndexDate = nil
@@ -503,10 +529,16 @@ final class IndexCoordinator: ObservableObject {
         policy: ContentSamplingPolicy,
         budget: Int64
     ) -> String? {
+        let handle: FileHandle
         do {
-            let handle = try FileHandle(forReadingFrom: url)
-            defer { try? handle.close() }
+            handle = try FileHandle(forReadingFrom: url)
+        } catch {
+            NSLog("[Index] Failed to open file handle for %@: %@", url.path, error.localizedDescription)
+            return nil
+        }
+        defer { try? handle.close() }
 
+        do {
             var headBytes = min(Int64(Double(size) * policy.headFraction), budget)
             var tailBytes = max(budget - headBytes, 0)
 

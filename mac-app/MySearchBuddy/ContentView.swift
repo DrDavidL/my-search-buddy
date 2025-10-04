@@ -12,6 +12,15 @@ struct ContentView: View {
     @FocusState private var searchFieldIsFocused: Bool
     @State private var selectedResultPath: String?
     @State private var sortBy = SortOption.score
+    @State private var sortOrder: SortOrder = .forward
+
+    enum SortColumn {
+        case name, size, modified, score
+    }
+
+    enum SortOrder {
+        case forward, reverse
+    }
 
     private let officeQuickFilterTerms = [
         "ext:doc",
@@ -76,6 +85,7 @@ struct ContentView: View {
             indexCoordinator.requestIncrementalIndexIfNeeded(roots: bookmarkStore.allBookmarkURLs)
         }
         .focusedValue(\.quickLookAction, quickLookFocusedAction)
+        .focusedValue(\.fileOpenAction, fileOpenFocusedAction)
     }
 
     private var leftPane: some View {
@@ -102,9 +112,93 @@ struct ContentView: View {
     }
 
     private var headerSection: some View {
-        Text("My Search Buddy")
-            .font(.largeTitle)
-            .bold()
+        HStack(spacing: 12) {
+            // Search dog mascot
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.15))
+                    .frame(width: 50, height: 50)
+
+                if searchViewModel.isSearching {
+                    // Digging animation
+                    Image(systemName: "pawprint.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(.orange)
+                        .rotationEffect(.degrees(digAngle))
+                } else if !searchViewModel.results.isEmpty {
+                    // Found results - holding bone
+                    Image(systemName: "rectangle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.brown)
+                        .rotationEffect(.degrees(-45))
+                        .overlay(
+                            Circle()
+                                .fill(.brown)
+                                .frame(width: 6, height: 6)
+                                .offset(x: -8, y: -8)
+                        )
+                        .overlay(
+                            Circle()
+                                .fill(.brown)
+                                .frame(width: 6, height: 6)
+                                .offset(x: 8, y: 8)
+                        )
+                } else {
+                    // Idle - cute dog face
+                    Image(systemName: "pawprint.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(.orange)
+                }
+            }
+            .onAppear {
+                if searchViewModel.isSearching {
+                    startDigAnimation()
+                }
+            }
+            .onChange(of: searchViewModel.isSearching) { isSearching in
+                if isSearching {
+                    startDigAnimation()
+                } else {
+                    digTimer?.invalidate()
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("My Search Buddy")
+                    .font(.title.bold())
+                    .foregroundStyle(.primary)
+                Text(dogStatusMessage)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .animation(.easeInOut(duration: 0.3), value: dogStatusMessage)
+            }
+
+            Spacer()
+        }
+    }
+
+    @State private var digAngle: Double = 0
+    @State private var digTimer: Timer?
+
+    private func startDigAnimation() {
+        digTimer?.invalidate()
+        digTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                digAngle = digAngle == 0 ? 25 : (digAngle == 25 ? -25 : 0)
+            }
+        }
+    }
+
+    private var dogStatusMessage: String {
+        if searchViewModel.isSearching {
+            return "Digging for files..."
+        } else if !searchViewModel.results.isEmpty {
+            return "Found \(searchViewModel.results.count) file\(searchViewModel.results.count == 1 ? "" : "s")!"
+        } else if !searchViewModel.query.isEmpty {
+            return "No matches found"
+        } else {
+            return "Ready to search"
+        }
     }
 
     private var locationListSection: some View {
@@ -151,8 +245,12 @@ struct ContentView: View {
                 Button(indexCoordinator.isIndexing ? "Cancel" : "Update Index", action: toggleIndexing)
                     .disabled(bookmarkStore.bookmarks.isEmpty)
                     .help("Scan bookmarked folders for new or changed files")
-                Button("Rebuild Index") { indexCoordinator.resetIndex() }
+                Button("Rebuild Index") {
+                    indexCoordinator.resetIndex()
+                    indexCoordinator.startIndexing(roots: bookmarkStore.allBookmarkURLs, mode: .full)
+                }
                     .help("Erase and recreate the entire search index")
+                    .disabled(bookmarkStore.bookmarks.isEmpty)
                 Spacer()
             }
             Text(statusSummary)
@@ -239,35 +337,122 @@ struct ContentView: View {
                     ProgressView().controlSize(.small)
                 }
                 Spacer()
+                if !searchViewModel.query.isEmpty {
+                    Text("↩ Open • ␣ Quick Look • ⌘R Reveal in Finder")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
     }
 
     private var resultsListSection: some View {
-        List(selection: $selectedResultPath) {
-            ForEach(searchViewModelResults, id: \.path) { hit in
-                ResultRow(hit: hit)
-                    .environmentObject(indexCoordinator)
-                    .contentShape(Rectangle())
-                    .onTapGesture { selectedResultPath = hit.path }
-                    .onTapGesture(count: 2) {
-                        selectedResultPath = hit.path
-                        openFile(at: hit.path)
-                    }
+        VStack(spacing: 0) {
+            // Column headers
+            if !searchViewModelResults.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc")
+                        .frame(width: 20)
+                        .opacity(0) // Spacer for icon column
+
+                    sortableHeader(title: "Name", column: .name)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    sortableHeader(title: "Size", column: .size)
+                        .frame(width: 70, alignment: .trailing)
+
+                    sortableHeader(title: "Modified", column: .modified)
+                        .frame(width: 90, alignment: .trailing)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 6)
+                .background(Color(nsColor: .windowBackgroundColor).opacity(0.5))
+                .overlay(alignment: .bottom) {
+                    Divider()
+                }
+            }
+
+            List(selection: $selectedResultPath) {
+                ForEach(sortedResults, id: \.path) { hit in
+                    ResultRow(hit: hit)
+                        .environmentObject(indexCoordinator)
+                        .contentShape(Rectangle())
+                        .onTapGesture(count: 2) {
+                            selectedResultPath = hit.path
+                            openFile(at: hit.path)
+                        }
+                        .onTapGesture {
+                            selectedResultPath = hit.path
+                        }
+                }
+            }
+            .listStyle(.inset)
+        }
+        .frame(minHeight: 280)
+    }
+
+    private func sortableHeader(title: String, column: SortColumn) -> some View {
+        Button(action: {
+            if currentSortColumn == column {
+                sortOrder = sortOrder == .forward ? .reverse : .forward
+            } else {
+                currentSortColumn = column
+                sortOrder = .forward
+            }
+        }) {
+            HStack(spacing: 2) {
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                if currentSortColumn == column {
+                    Image(systemName: sortOrder == .forward ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 8))
+                }
             }
         }
-        .listStyle(.inset)
-        .frame(minHeight: 280)
+        .buttonStyle(.plain)
+        .foregroundStyle(currentSortColumn == column ? .primary : .secondary)
+    }
+
+    @State private var currentSortColumn: SortColumn = .score
+
+    private var sortedResults: [FinderCore.Hit] {
+        let results = searchViewModelResults
+        let sorted = results.sorted { lhs, rhs in
+            let comparison: Bool
+            switch currentSortColumn {
+            case .name:
+                comparison = lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            case .size:
+                comparison = lhs.size < rhs.size
+            case .modified:
+                comparison = lhs.mtime < rhs.mtime
+            case .score:
+                comparison = lhs.score > rhs.score // Higher score first
+            }
+            return sortOrder == .forward ? comparison : !comparison
+        }
+        return sorted
     }
 
     private var actionButtons: some View {
         HStack {
             Button("Open in Finder", action: revealSelectedInFinder)
                 .disabled(selectedHit == nil)
+                .keyboardShortcut("r", modifiers: .command)
             Button("Quick Look", action: quickLookSelected)
                 .disabled(selectedHit == nil)
+                .keyboardShortcut(.space, modifiers: [])
+            Button("Open", action: openSelectedFile)
+                .disabled(selectedHit == nil)
+                .keyboardShortcut(.return, modifiers: .command)
             Spacer()
         }
+    }
+
+    private func openSelectedFile() {
+        guard let hit = selectedHit else { return }
+        openFile(at: hit.path)
     }
 
     private var searchViewModelResults: [FinderCore.Hit] { searchViewModel.results }
@@ -276,6 +461,10 @@ struct ContentView: View {
         QuickLookAction(isEnabled: selectedHit != nil) {
             quickLookSelected()
         }
+    }
+
+    private var fileOpenFocusedAction: FileOpenAction {
+        FileOpenAction { openSelectedFile() }
     }
 
     private var selectedHit: FinderCore.Hit? {
@@ -424,6 +613,35 @@ struct QuickLookCommands: Commands {
             }
             .keyboardShortcut(.space, modifiers: [])
             .disabled(quickLookAction?.isEnabled != true)
+        }
+    }
+}
+
+struct FileOpenAction {
+    let perform: () -> Void
+}
+
+struct FileOpenActionKey: FocusedValueKey {
+    typealias Value = FileOpenAction
+}
+
+extension FocusedValues {
+    var fileOpenAction: FileOpenAction? {
+        get { self[FileOpenActionKey.self] }
+        set { self[FileOpenActionKey.self] = newValue }
+    }
+}
+
+struct FileCommands: Commands {
+    @FocusedValue(\.fileOpenAction) private var fileOpenAction
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("Open") {
+                fileOpenAction?.perform()
+            }
+            .keyboardShortcut(.return, modifiers: [])
+            .disabled(fileOpenAction == nil)
         }
     }
 }

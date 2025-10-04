@@ -59,7 +59,7 @@ final class BookmarkStore: ObservableObject {
 
             return ScopedURL(
                 url: finalURL,
-                stopAccess: {
+                stopAccess: { [root] in
                     if hasFileScope {
                         finalURL.stopAccessingSecurityScopedResource()
                     }

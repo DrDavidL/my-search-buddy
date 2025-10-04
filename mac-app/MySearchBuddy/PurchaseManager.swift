@@ -15,6 +15,10 @@ final class PurchaseManager: ObservableObject {
     private var hasStarted = false
     private var updatesTask: Task<Void, Never>? = nil
 
+    // Debug: Set to true to bypass paywall for local testing
+    // ⚠️ MUST BE FALSE FOR PRODUCTION/TESTFLIGHT
+    private let debugBypassPaywall = false
+
     init() {}
 
     deinit {
@@ -27,6 +31,14 @@ final class PurchaseManager: ObservableObject {
             return
         }
         hasStarted = true
+
+        // Debug bypass for local testing
+        if debugBypassPaywall {
+            subscriptionActive = true
+            isReady = true
+            return
+        }
+
         await loadProducts()
         await refreshEntitlements()
         listenForTransactions()
