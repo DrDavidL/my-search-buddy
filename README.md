@@ -15,6 +15,17 @@ A production-ready macOS app combining SwiftUI elegance with Rust-powered search
 
 ---
 
+## Commercial Use
+
+This project is licensed under the MIT License, which permits commercial use.
+
+While the **source code** is open and free to inspect, modify, and use, the
+**My Search Buddy application** is a commercial product developed and maintained
+by CodeAccelerate, LLC.
+
+Revenue from the commercial app supports ongoing development and helps keep
+the project active and well-maintained.
+
 ## Repository Structure
 
 - **`finder-core`** - Rust search engine (indexing, querying, file scanning)

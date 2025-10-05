@@ -745,8 +745,13 @@ struct InfoModalView: View {
                     .font(.title)
                     .foregroundColor(.accentColor)
 
-                Text("About My Search Buddy")
-                    .font(.title2.bold())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("About My Search Buddy")
+                        .font(.title2.bold())
+                    Text("Version 0.2")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Spacer()
 
@@ -888,6 +893,54 @@ struct InfoModalView: View {
                             }
                         }
                         .padding(.leading)
+                    }
+
+                    Divider()
+
+                    // Open Source
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                                .foregroundColor(.purple)
+                            Text("Open Source")
+                                .font(.headline)
+                        }
+
+                        Text("My Search Buddy is **open source software** licensed under the MIT License.")
+                            .font(.subheadline)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "lock.shield")
+                                    .foregroundColor(.purple)
+                                    .frame(width: 20)
+                                Text("**Transparent & Secure** — You can audit the code to verify your privacy and security")
+                            }
+
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "building.2")
+                                    .foregroundColor(.purple)
+                                    .frame(width: 20)
+                                Text("**Copyright © 2025 CodeAccelerate, LLC**")
+                            }
+
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "arrow.up.forward.square")
+                                    .foregroundColor(.purple)
+                                    .frame(width: 20)
+                                Button(action: {
+                                    NSWorkspace.shared.open(URL(string: "https://github.com/DrDavidL/my-search-buddy")!)
+                                }) {
+                                    Text("View source code on GitHub")
+                                }
+                                .buttonStyle(.link)
+                            }
+                        }
+                        .padding(.leading)
+
+                        Text("Built with Swift, SwiftUI, and Tantivy (Apache 2.0). All dependencies are commercially compatible and privacy-respecting.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .padding()
