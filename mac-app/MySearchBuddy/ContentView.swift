@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var showFirstRunGuide = false
     @State private var showInfoModal = false
     @State private var showHelpTopic: HelpTopic?
+    @State private var showAboutWindow = false
 
     enum SortColumn {
         case name, size, modified, score
@@ -97,9 +98,13 @@ struct ContentView: View {
         .sheet(item: $showHelpTopic) { topic in
             HelpTopicView(topic: topic)
         }
+        .sheet(isPresented: $showAboutWindow) {
+            InfoModalView(indexCoordinator: indexCoordinator)
+        }
         .focusedValue(\.quickLookAction, quickLookFocusedAction)
         .focusedValue(\.fileOpenAction, fileOpenFocusedAction)
         .focusedValue(\.showHelpTopic, $showHelpTopic)
+        .focusedValue(\.showAbout, $showAboutWindow)
     }
 
     private var leftPane: some View {
@@ -733,6 +738,30 @@ struct HelpCommands: Commands {
     }
 }
 
+struct ShowAboutKey: FocusedValueKey {
+    typealias Value = Binding<Bool>
+}
+
+extension FocusedValues {
+    var showAbout: Binding<Bool>? {
+        get { self[ShowAboutKey.self] }
+        set { self[ShowAboutKey.self] = newValue }
+    }
+}
+
+struct AboutCommands: Commands {
+    @FocusedValue(\.showAbout) private var showAbout
+
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About My Search Buddy") {
+                showAbout?.wrappedValue = true
+            }
+            .disabled(showAbout == nil)
+        }
+    }
+}
+
 struct InfoModalView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var indexCoordinator: IndexCoordinator
@@ -962,7 +991,7 @@ struct InfoModalView: View {
             .padding()
             .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(width: 600, height: 500)
+        .frame(width: 600, height: 600)
     }
 }
 

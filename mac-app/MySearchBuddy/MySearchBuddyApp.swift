@@ -23,6 +23,7 @@ struct MySearchBuddyApp: App {
                 .environmentObject(fileTypeFilters)
         }
         .commands {
+            AboutCommands()
             QuickLookCommands()
             FileCommands()
             HelpCommands()

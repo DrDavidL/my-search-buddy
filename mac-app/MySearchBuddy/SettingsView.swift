@@ -21,45 +21,49 @@ struct SettingsView: View {
     }
 
     private var indexingSettingsTab: some View {
-        Form {
-            Section("Indexing") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Content coverage: \(labelText)")
-                        .font(.subheadline)
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Indexing")
+                .font(.headline)
 
-                    Slider(
-                        value: coverageSettings.bindingForSlider(),
-                        in: coverageSettings.sliderRange,
-                        step: 1
-                    )
-                    .disabled(coverageSettings.isOverrideActive)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Content coverage: \(labelText)")
+                    .font(.subheadline)
 
-                    Text(
-                        "Indexes the first \(headText) and the final \(tailText) of each file (\(labelText) total)."
-                    )
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Slider(
+                    value: coverageSettings.bindingForSlider(),
+                    in: coverageSettings.sliderRange,
+                    step: 1
+                )
+                .disabled(coverageSettings.isOverrideActive)
 
-                    if coverageSettings.isOverrideActive {
-                        Text("Currently overridden by the MSB_CONTENT_PERCENT environment variable.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                Text(
+                    "Indexes the first \(headText) and the final \(tailText) of each file (\(labelText) total)."
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Schedule automatic updates between 2–4 AM", isOn: $indexCoordinator.scheduleWindowEnabled)
-                        .toggleStyle(.switch)
-
-                    if let nextRun = indexCoordinator.nextScheduledRun {
-                        Text("Next scheduled run: \(scheduleFormatter.string(from: nextRun))")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                    }
+                if coverageSettings.isOverrideActive {
+                    Text("Currently overridden by the MSB_CONTENT_PERCENT environment variable.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Schedule automatic updates between 2–4 AM", isOn: $indexCoordinator.scheduleWindowEnabled)
+                    .toggleStyle(.switch)
+
+                if let nextRun = indexCoordinator.nextScheduledRun {
+                    Text("Next scheduled run: \(scheduleFormatter.string(from: nextRun))")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
         }
         .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear { coverageSettings.refreshPolicy() }
     }
 
