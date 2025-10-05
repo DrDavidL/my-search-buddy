@@ -30,6 +30,6 @@ We do **not** collect personal data. The app does not transmit any data to exter
 
 ## Contact
 
-Questions about privacy? Email privacy@mysearchbuddy.app.
+Questions about privacy? Email david at codeaccelerate.com.
 
 Please do not send personal or sensitive data when contacting us.
