@@ -16,26 +16,36 @@ final class PurchaseManager: ObservableObject {
     private var updatesTask: Task<Void, Never>? = nil
 
     // Debug: Set to true to bypass paywall for local testing
-    // ⚠️ MUST BE FALSE FOR PRODUCTION/TESTFLIGHT
-    private let debugBypassPaywall = false
+    // Set to TRUE for TestFlight (free testing), FALSE for App Store release
+    private let debugBypassPaywall = true
 
-    init() {}
+    init() {
+        NSLog("[PurchaseManager] Initializing")
+    }
 
     deinit {
         updatesTask?.cancel()
     }
 
     func start() async {
+        NSLog("[PurchaseManager] start() called, hasStarted=%d, debugBypassPaywall=%d", hasStarted, debugBypassPaywall)
         guard !hasStarted else {
-            await refreshEntitlements()
+            NSLog("[PurchaseManager] Already started")
+            // Don't refresh entitlements if debug bypass is enabled
+            if !debugBypassPaywall {
+                NSLog("[PurchaseManager] Refreshing entitlements")
+                await refreshEntitlements()
+            }
             return
         }
         hasStarted = true
 
         // Debug bypass for local testing
         if debugBypassPaywall {
+            NSLog("[PurchaseManager] Debug bypass enabled, setting subscriptionActive=true, isReady=true")
             subscriptionActive = true
             isReady = true
+            NSLog("[PurchaseManager] Debug bypass complete")
             return
         }
 

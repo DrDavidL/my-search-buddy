@@ -9,8 +9,10 @@ final class IndexCoordinator: ObservableObject {
     @Published var lastIndexDate: Date?
     @Published private(set) var samplingPolicy = ContentCoverageSettings.defaultSamplingPolicy()
     @Published private(set) var cloudPlaceholders: Set<String> = []
+    @Published private(set) var currentPhase: IndexPhase?
 
     private var task: Task<Void, Never>?
+    private var backgroundTask: Task<Void, Never>?
     private let indexDirectory: URL
     private let defaults = UserDefaults.standard
     private let lastIndexDefaultsKey = "indexCoordinator.lastIndexDate"
@@ -34,6 +36,11 @@ final class IndexCoordinator: ObservableObject {
     enum IndexMode {
         case incremental
         case full
+    }
+
+    enum IndexPhase {
+        case initial      // Fast: only recent files (last 90 days)
+        case background   // Slow: older files, runs in background
     }
 
     private enum RecencyBucket: Int, CaseIterable {
@@ -75,9 +82,12 @@ final class IndexCoordinator: ObservableObject {
     }
 
     init() {
+        NSLog("[IndexCoordinator] Initializing")
         indexDirectory = IndexCoordinator.defaultIndexDirectory()
         ensureIndexDirectoryExists()
+        NSLog("[IndexCoordinator] Calling FinderCore.initIndex")
         FinderCore.initIndex(at: indexDirectory.path)
+        NSLog("[IndexCoordinator] FinderCore.initIndex completed")
 
         if let storedDate = defaults.object(forKey: lastIndexDefaultsKey) as? Date {
             lastIndexDate = storedDate
@@ -97,42 +107,72 @@ final class IndexCoordinator: ObservableObject {
         samplingPolicy = policy
     }
 
-    func startIndexing(roots: [URL], mode: IndexMode = .incremental, scheduled: Bool = false) {
-        guard !roots.isEmpty else { return }
-        cancel()
+    func startIndexing(roots: [URL], mode: IndexMode = .incremental, phase: IndexPhase = .initial, scheduled: Bool = false) {
+        guard !roots.isEmpty else {
+            NSLog("[Index] startIndexing called with empty roots")
+            return
+        }
+        NSLog("[Index] startIndexing called with %d roots, mode: %@, phase: %@",
+              roots.count,
+              mode == .full ? "full" : "incremental",
+              phase == .initial ? "initial" : "background")
 
-        if scheduleWindowEnabled && !scheduled && mode == .incremental {
+        if phase == .initial {
+            cancel()  // Cancel any existing tasks when starting fresh
+        }
+
+        if scheduleWindowEnabled && !scheduled && mode == .incremental && phase == .initial {
             if scheduleIndexingIfNeeded(roots: roots, mode: mode) {
                 return
             }
         }
 
         isIndexing = true
-        status = mode == .full ? "Rebuilding index…" : "Checking for updates…"
-        filesIndexed = 0
+        currentPhase = phase
+
+        if phase == .initial {
+            status = "Indexing recent files (quick)…"
+            filesIndexed = 0
+        } else {
+            status = "Indexing older files in background…"
+        }
 
         let policy = samplingPolicy
 
-        if mode == .full {
+        if mode == .full && phase == .initial {
             FinderCore.close()
             FinderCore.initIndex(at: indexDirectory.path)
         }
 
         let baseline = mode == .incremental ? lastIndexDate : nil
+        let priority: TaskPriority = phase == .initial ? .userInitiated : .background
 
-        task = Task.detached(priority: .utility) { [weak self] in
+        task = Task.detached(priority: priority) { [weak self] in
             guard let self else { return }
             let startTime = Date()
 
+            // Prioritize Documents folder for faster access to recent important files
+            let sortedRoots = roots.sorted { lhs, rhs in
+                let lhsIsDocuments = lhs.lastPathComponent == "Documents"
+                let rhsIsDocuments = rhs.lastPathComponent == "Documents"
+                if lhsIsDocuments != rhsIsDocuments {
+                    return lhsIsDocuments  // Documents first
+                }
+                return lhs.path < rhs.path  // Otherwise alphabetical
+            }
+
             var totalProcessed = 0
-            for root in roots {
+
+            // Process roots in order (Documents first for recent files)
+            for root in sortedRoots {
                 if Task.isCancelled { break }
                 let processed = await self.indexRoot(
                     root,
                     startingFrom: totalProcessed,
                     policy: policy,
                     since: baseline,
-                    mode: mode
+                    mode: mode,
+                    phase: phase
                 )
                 totalProcessed += processed
             }
@@ -140,18 +180,30 @@ final class IndexCoordinator: ObservableObject {
             let finalTotal = totalProcessed
             await MainActor.run {
                 self.isIndexing = false
+                self.currentPhase = nil
                 if Task.isCancelled {
                     self.status = "Indexing cancelled."
                 } else {
                     let elapsed = Date().timeIntervalSince(startTime)
-                    if finalTotal == 0 {
-                        self.status = String(format: "Index up to date (%.1fs)", elapsed)
+                    if phase == .initial {
+                        if finalTotal == 0 {
+                            self.status = String(format: "Recent files up to date (%.1fs)", elapsed)
+                        } else {
+                            self.status = String(format: "Indexed %d recent files (%.1fs)", finalTotal, elapsed)
+                        }
+                        // Auto-start background indexing after initial phase completes
+                        NSLog("[Index] Initial phase complete, starting background indexing")
+                        self.startIndexing(roots: roots, mode: mode, phase: .background, scheduled: scheduled)
                     } else {
-                        self.status = String(format: "Indexed %d files (%.1fs)", finalTotal, elapsed)
+                        if finalTotal == 0 {
+                            self.status = "Index fully up to date"
+                        } else {
+                            self.status = String(format: "Indexed %d total files (%.1fs)", finalTotal, elapsed)
+                        }
+                        let completionDate = Date()
+                        self.lastIndexDate = completionDate
+                        self.defaults.set(completionDate, forKey: self.lastIndexDefaultsKey)
                     }
-                    let completionDate = Date()
-                    self.lastIndexDate = completionDate
-                    self.defaults.set(completionDate, forKey: self.lastIndexDefaultsKey)
                 }
                 self.filesIndexed = finalTotal
             }
@@ -169,8 +221,15 @@ final class IndexCoordinator: ObservableObject {
 
     @MainActor
     func requestIncrementalIndexIfNeeded(roots: [URL]) {
-        guard !roots.isEmpty else { return }
-        guard !isIndexing else { return }
+        NSLog("[Index] requestIncrementalIndexIfNeeded called with %d roots", roots.count)
+        guard !roots.isEmpty else {
+            NSLog("[Index] requestIncrementalIndexIfNeeded: roots empty, returning")
+            return
+        }
+        guard !isIndexing else {
+            NSLog("[Index] requestIncrementalIndexIfNeeded: already indexing, returning")
+            return
+        }
 
         let now = Date()
         if let lastAttempt = lastAutoIndexAttempt, now.timeIntervalSince(lastAttempt) < autoIndexInterval {
@@ -322,10 +381,14 @@ final class IndexCoordinator: ObservableObject {
             if FinderCore.addOrUpdate(meta: meta, content: content) {
                 processed += 1
                 didUpdate = true
+                if processed == 1 || processed == 10 || processed == 100 || processed % 500 == 0 {
+                    NSLog("[Index] ✅ Indexed %d files (latest: %@)", processed, pending.url.lastPathComponent)
+                }
             }
 
             let now = Date()
             if now.timeIntervalSince(lastCommit) > 2.0 || (processed % 1000 == 0 && processed > 0) {
+                NSLog("[Index] Auto-committing after %d files", processed)
                 FinderCore.commitAndRefresh()
                 lastCommit = now
             }
@@ -339,10 +402,15 @@ final class IndexCoordinator: ObservableObject {
         startingFrom totalProcessed: Int,
         policy: ContentSamplingPolicy,
         since cutoff: Date?,
-        mode: IndexMode
+        mode: IndexMode,
+        phase: IndexPhase
     ) async -> Int {
+        NSLog("[Index] indexRoot starting for: %@", root.path)
         var processed = 0
-        guard root.startAccessingSecurityScopedResource() else { return 0 }
+        guard root.startAccessingSecurityScopedResource() else {
+            NSLog("[Index] Failed to access security-scoped resource for: %@", root.path)
+            return 0
+        }
         defer { root.stopAccessingSecurityScopedResource() }
 
         let fm = FileManager.default
@@ -355,16 +423,32 @@ final class IndexCoordinator: ObservableObject {
             .ubiquitousItemDownloadingStatusKey
         ]
         guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles, .producesRelativePathURLs]) else {
+            NSLog("[Index] Failed to create enumerator for: %@", root.path)
             return 0
         }
 
+        NSLog("[Index] Starting file enumeration for: %@ (phase: %@)", root.path, phase == .initial ? "initial" : "background")
         var bucketed: [[PendingFile]] = Array(repeating: [], count: RecencyBucket.allCases.count)
         let now = Date()
 
         var lastCommit = Date()
+        var fileCount = 0
+
+        // Limit enumeration in initial phase for faster startup
+        let enumerationLimit: Int? = phase == .initial ? 20000 : nil
 
         while let entry = enumerator.nextObject() as? URL {
+            fileCount += 1
+            if fileCount % 1000 == 0 {
+                NSLog("[Index] Enumerated %d files so far from %@", fileCount, root.path)
+            }
             if Task.isCancelled { break }
+
+            // In initial phase, limit enumeration for faster startup
+            if let limit = enumerationLimit, fileCount >= limit {
+                NSLog("[Index] Hit enumeration limit (%d files) in initial phase for %@", limit, root.path)
+                break
+            }
 
             guard let values = try? entry.resourceValues(forKeys: keys), values.isDirectory != true else {
                 continue
@@ -389,21 +473,40 @@ final class IndexCoordinator: ObservableObject {
             bucketed[bucket.rawValue].append(pending)
         }
 
+        NSLog("[Index] Enumeration complete. Total files found: %d", fileCount)
+        let totalBucketed = bucketed.reduce(0) { $0 + $1.count }
+        NSLog("[Index] Files bucketed: %d", totalBucketed)
+
         let rootKey = root.path
         let startBucketIndex = mode == .full ? progressIndex(for: rootKey) : 0
 
         var cancelled = false
 
-        bucketLoop: for bucket in RecencyBucket.allCases {
+        // Determine which buckets to process based on phase
+        let bucketsToProcess: [RecencyBucket]
+        if phase == .initial {
+            // Initial phase: only recent files (last 90 days)
+            bucketsToProcess = [.last3Months]
+        } else {
+            // Background phase: older files
+            bucketsToProcess = [.last6Months, .last12Months, .older]
+        }
+
+        // Use longer commit interval for background phase
+        let commitInterval: TimeInterval = phase == .initial ? 2.0 : 1800.0  // 2s for initial, 30min for background
+
+        bucketLoop: for bucket in bucketsToProcess {
             if Task.isCancelled { break }
             if bucket.rawValue < startBucketIndex { continue }
             let files = bucketed[bucket.rawValue]
             if files.isEmpty { continue }
 
+            NSLog("[Index] Processing bucket %@ with %d files (phase: %@)", bucket.startStatus, files.count, phase == .initial ? "initial" : "background")
             await MainActor.run {
                 self.status = bucket.startStatus
             }
 
+            var bucketProcessed = 0
             for pending in files {
                 if Task.isCancelled {
                     cancelled = true
@@ -415,23 +518,40 @@ final class IndexCoordinator: ObservableObject {
                            processed: &processed,
                            lastCommit: &lastCommit,
                            policy: policy) {
+                    bucketProcessed += 1
                     let runningTotal = totalProcessed + processed
                     if processed % 50 == 0 {
                         Task { @MainActor [weak self] in
                             guard let self else { return }
                             self.filesIndexed = runningTotal
-                            self.status = "Indexed \(runningTotal) files…"
+                            if phase == .initial {
+                                self.status = "Indexed \(runningTotal) recent files…"
+                            } else {
+                                self.status = "Indexed \(runningTotal) files in background…"
+                            }
                         }
                     }
                 }
+
+                // Periodic commits based on phase
+                let now = Date()
+                if now.timeIntervalSince(lastCommit) > commitInterval {
+                    NSLog("[Index] Periodic commit after %.0f seconds (%d files processed)", now.timeIntervalSince(lastCommit), processed)
+                    FinderCore.commitAndRefresh()
+                    lastCommit = now
+                }
             }
+            NSLog("[Index] Processed %d files from bucket %@", bucketProcessed, bucket.startStatus)
+
+            // Commit after each bucket so results appear progressively
+            NSLog("[Index] Committing after bucket %@", bucket.startStatus)
+            FinderCore.commitAndRefresh()
+            lastCommit = Date()
 
             if mode == .full {
                 setProgressIndex(bucket.rawValue + 1, for: rootKey)
             }
         }
-
-        FinderCore.commitAndRefresh()
         let finalTotal = totalProcessed + processed
         let indexedAnything = processed > 0
         await MainActor.run {
@@ -445,6 +565,7 @@ final class IndexCoordinator: ObservableObject {
             setProgressIndex(nil, for: rootKey)
         }
 
+        NSLog("[Index] indexRoot completed for %@, processed %d files", root.path, processed)
         return processed
     }
 
@@ -471,6 +592,37 @@ final class IndexCoordinator: ObservableObject {
         cloudPlaceholders.removeAll()
         defaults.removeObject(forKey: bucketProgressKey)
         cancelScheduledRun()
+    }
+
+    /// Rebuild the index from scratch without showing "canceled" state
+    func rebuildIndex(roots: [URL]) {
+        // Cancel any running task silently
+        task?.cancel()
+        task = nil
+
+        // Close and clear index
+        FinderCore.close()
+        do {
+            try FileManager.default.removeItem(at: indexDirectory)
+        } catch {
+            NSLog("[Index] Failed to remove index directory: %@", error.localizedDescription)
+        }
+
+        ensureIndexDirectoryExists()
+
+        if !FinderCore.initIndex(at: indexDirectory.path) {
+            NSLog("[Index] Failed to reinitialize index after reset")
+        }
+
+        filesIndexed = 0
+        lastIndexDate = nil
+        defaults.removeObject(forKey: lastIndexDefaultsKey)
+        cloudPlaceholders.removeAll()
+        defaults.removeObject(forKey: bucketProgressKey)
+        cancelScheduledRun()
+
+        // Immediately start indexing (no intermediate canceled state)
+        startIndexing(roots: roots, mode: .full)
     }
 
     private func progressIndex(for root: String) -> Int {

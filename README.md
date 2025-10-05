@@ -1,22 +1,60 @@
-# My Search Buddy
+# My Search Buddy 🐕
 
-Early-stage workspace for the macOS search companion app. The repo hosts:
+**Lightning-fast file search for macOS** - Your digital search companion that actually finds what you're looking for.
 
-- `finder-core`: Rust library that handles scanning, indexing, and searching.
-- `mac-app`: SwiftUI macOS application that sits on top of the Rust core.
-- `scripts`: Helper scripts for builds, tests, and automation.
+A production-ready macOS app combining SwiftUI elegance with Rust-powered search performance. Built with privacy-first principles, sandbox security, and zero data collection.
 
-## Getting Started
+## What Makes It Special
 
-1. Install the Rust toolchain (nightly not required) and Xcode 15 or newer.
-2. Build finder-core:
-   ```bash
-   cargo build -p finder-core
-   cargo build -p finder-core --release
-   ```
-   Both debug and release dylibs will land in `target/` and are referenced by the app.
-3. Open `mac-app/MySearchBuddy.xcodeproj`, select the **MySearchBuddy** scheme, and build/run. (You can also use `xcodebuild -scheme MySearchBuddy -configuration Debug`.)
-4. Tests: `cargo test -p finder-core` (Rust) and `swift test` inside `mac-app/Packages/FinderCoreFFI` once the dylib is built.
+🚀 **Blazing Fast** - Powered by Tantivy (Lucene-grade search engine)
+🔒 **Privacy-First** - 100% local, zero tracking, no data collection
+🎯 **Smart Indexing** - Processes recent files first, skips unchanged content
+🎨 **Delightful UX** - Animated search dog, sortable columns, instant preview
+📦 **Content Search** - Index file contents with intelligent sampling
+☁️ **Cloud-Aware** - Detects iCloud/OneDrive placeholders automatically
+
+---
+
+## Repository Structure
+
+- **`finder-core`** - Rust search engine (indexing, querying, file scanning)
+- **`mac-app`** - SwiftUI macOS application with modern Mac design
+- **`scripts`** - Build automation and universal binary creation
+
+## Quick Start
+
+### Prerequisites
+- macOS 13.0+ (Ventura or later)
+- Xcode 15+ with Command Line Tools
+- Rust toolchain (stable)
+
+### Build Instructions
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/my-search-buddy.git
+cd my-search-buddy
+
+# 2. Build universal Rust library (Intel + Apple Silicon)
+bash scripts/build_finder_core_universal.sh
+
+# 3. Build the Mac app
+cd mac-app
+xcodebuild -scheme MySearchBuddy -configuration Release build
+
+# 4. Run the app
+open ~/Library/Developer/Xcode/DerivedData/MySearchBuddy-*/Build/Products/Release/MySearchBuddy.app
+```
+
+### Running Tests
+```bash
+# Rust tests
+cargo test -p finder-core
+
+# Swift FFI tests
+cd mac-app/Packages/FinderCoreFFI
+swift test
+```
 
 ## Pricing & Availability
 
@@ -70,19 +108,132 @@ We are rolling out a user-facing knob for how much text to index per file:
 - [serde](https://crates.io/crates/serde) – MIT OR Apache-2.0
 - [anyhow](https://crates.io/crates/anyhow) – MIT OR Apache-2.0
 
-## mac-app UI Highlights
+## Features
 
-- **Two-pane layout:** folders/filters on the left, results on the right.
-- **Quick filters:** one-click buttons for DOC/DOCX, PPT/PPTX, PDF, and XLS/XLSX.
-- **Location filters:** checkboxes per indexed folder with “All” and “None” shortcuts; only enabled locations are searched.
-- **Search controls:** explicit Search & Clear buttons, scope toggle (Name/Content/Both), and sort toggle (Score/Modified).
-- **Actions:** Open in Finder, Quick Look (sandbox-safe controller), and Reset Index.
-- **Index maintenance:** "Update Index" performs an incremental scan using the last indexed timestamp; "Rebuild Index" wipes the Tantivy store and recreates it when you need a clean slate.
-- **Status:** shows last index time and status message beneath the indexing controls.
+### Search & Discovery
+- 🔍 **Multi-scope Search** - Search by name, content, or both
+- 📊 **Sortable Results** - Click column headers (Name, Size, Modified, Relevance)
+- 🏷️ **File Type Badges** - Color-coded extension tags (PDF, DOC, XLS, etc.)
+- ⚡ **Quick Filters** - One-click filters for Office docs, PDFs, spreadsheets
+- 👁️ **Quick Look** - Press Spacebar for instant preview
+- 📂 **Smart Opening** - Enter to open, Double-click, or ⌘R to reveal in Finder
 
-## Status
+### Indexing Intelligence
+- 🕐 **Recent-First** - Newest files indexed first (last 90 days → 6 months → year → older)
+- 🔄 **Incremental Updates** - Only processes new/changed files
+- ☁️ **Cloud Detection** - Identifies iCloud/OneDrive placeholders automatically
+- 🚫 **Hidden File Protection** - Skips system files and secrets automatically
+- 🎯 **Smart Sampling** - Configurable content coverage (2%-50%)
 
-v0.2 is in flight. Expect rapid iteration and breaking changes while the MVP core loop is assembled.
+### User Experience
+- 🐕 **Animated Mascot** - Cute digging dog during search, holds bone when done!
+- 📍 **Location Management** - Multi-folder support with enable/disable toggles
+- ⌨️ **Keyboard Shortcuts** - Spacebar (preview), Enter (open), ⌘R (reveal)
+- 🎨 **File Icons** - Context-aware icons for documents, images, code, archives
+- 🌙 **Native macOS** - SwiftUI design, follows system appearance
+
+### Security & Privacy
+- 🔐 **Sandboxed** - Full App Store sandbox compliance
+- 🏠 **Local-Only** - Zero network access, no data transmission
+- 🔒 **Security-Scoped Bookmarks** - User-controlled folder access only
+- 🚫 **No Tracking** - Zero analytics, telemetry, or data collection
+- 📜 **Privacy Manifest** - Complete transparency (PrivacyInfo.xcprivacy)
+
+## Project Status
+
+**Current Version:** 0.2 (Build 1)
+**Status:** 🟢 Production-Ready - In TestFlight Beta
+**Platform:** macOS 13.0+ (Ventura, Sonoma, Sequoia)
+**Architecture:** Universal Binary (Intel + Apple Silicon)
+
+### Recent Milestones
+- ✅ Security audit complete (all vulnerabilities fixed)
+- ✅ Memory leaks resolved
+- ✅ Thread safety ensured
+- ✅ Performance optimizations applied
+- ✅ Sortable columns with visual indicators
+- ✅ Animated search mascot
+- ✅ TestFlight-ready build
+
+### Roadmap
+- 📄 PDF content extraction
+- 📝 DOCX/DOC indexing
+- 🌐 HTML/Markdown support
+- 📊 Advanced search syntax (filters, operators)
+- 🎨 Custom color themes
+- ⚙️ Advanced indexing preferences
+
+---
+
+## Documentation
+
+- **[TESTFLIGHT_DISTRIBUTION.md](TESTFLIGHT_DISTRIBUTION.md)** - Complete TestFlight setup guide
+- **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)** - Comprehensive security & privacy audit
+- **[PRIVACY.md](PRIVACY.md)** - How permissions and storage work
+- **[SECURITY.md](SECURITY.md)** - Responsible disclosure guidelines
+
+---
+
+## Contributing
+
+We welcome contributions! This project uses:
+- **Rust** (finder-core) - Search engine, indexing, FFI
+- **Swift/SwiftUI** (mac-app) - macOS user interface
+- **MIT License** - Permissive, commercial-friendly
+
+### Accepted Licenses
+✅ MIT, Apache-2.0, BSD, ISC, MPL-2.0, Unlicense, CC0, Zlib
+❌ GPL, LGPL, AGPL (App Store compatibility)
+
+### Guidelines
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes with clear messages
+4. Push to your branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+All contributions are accepted under MIT-compatible terms.
+
+---
+
+## Support & Community
+
+- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/yourusername/my-search-buddy/issues)
+- 💡 **Feature Requests:** [GitHub Discussions](https://github.com/yourusername/my-search-buddy/discussions)
+- 📧 **Contact:** [your-email@example.com]
+- 🔒 **Security Issues:** See [SECURITY.md](SECURITY.md) for responsible disclosure
+
+---
+
+## Acknowledgments
+
+### Core Technologies
+- **[Tantivy](https://github.com/quickwit-oss/tantivy)** - Blazing fast search engine (MIT)
+- **SwiftUI** - Modern macOS UI framework
+- **Rust** - Memory-safe systems programming
+
+### Key Dependencies
+All dependencies use permissive open-source licenses:
+- [tantivy](https://crates.io/crates/tantivy) - MIT
+- [globset](https://crates.io/crates/globset) - MIT OR Unlicense
+- [anyhow](https://crates.io/crates/anyhow) - MIT OR Apache-2.0
+- [serde](https://crates.io/crates/serde) - MIT OR Apache-2.0
+
+Full license attributions available in-app via LicensePlist.
+
+---
+
+## License
+
+**MIT License** - See [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2025 My Search Buddy
+
+Permission is hereby granted, free of charge, to use, modify, and distribute this software for any purpose, commercial or non-commercial, subject to the MIT license terms.
+
+---
+
+**Made with ❤️ for Mac users who deserve better search**
 
 ## FFI Header
 

@@ -66,7 +66,8 @@ pub fn scan_root<P: AsRef<Path>>(root: P) -> Result<Vec<FileMeta>> {
         .filter_map(|path| build_meta(path).ok())
         .collect();
 
-    entries.par_sort_by(|a, b| a.path.cmp(&b.path));
+    // Sort by modified time (newest first) for recent-first indexing
+    entries.par_sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
     Ok(entries)
 }
 
