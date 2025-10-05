@@ -26,5 +26,15 @@
     <string></string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>My Search Buddy needs access to your Desktop folder to index and search your files.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>My Search Buddy needs access to your Documents folder to index and search your files.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>My Search Buddy needs access to your Downloads folder to index and search your files.</string>
+    <key>NSRemovableVolumesUsageDescription</key>
+    <string>My Search Buddy needs access to external drives to index and search your files.</string>
+    <key>NSNetworkVolumesUsageDescription</key>
+    <string>My Search Buddy needs access to network drives to index and search your files.</string>
 </dict>
 </plist>
