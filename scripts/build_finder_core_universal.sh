@@ -99,6 +99,9 @@ fi
 echo "Creating universal libfinder_core.dylib"
 lipo -create -output "$UNIVERSAL_LIB" "$X86_LIB" "$ARM_LIB"
 
+echo "Setting install name to @rpath"
+install_name_tool -id "@rpath/libfinder_core.dylib" "$UNIVERSAL_LIB"
+
 echo "Distributing libfinder_core.dylib"
 cp "$UNIVERSAL_LIB" "$REPO_ROOT/target/release/libfinder_core.dylib"
 

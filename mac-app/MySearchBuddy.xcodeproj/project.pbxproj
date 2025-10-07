@@ -12,6 +12,7 @@
 		1A3B3F221BE9D4F200C5A7C5 /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A3B3F1B1BE9D4F200C5A7C5 /* BookmarkStore.swift */; };
 		1A3B3F281BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1A3B3F271BE9D4F200C5A7C5 /* PrivacyInfo.xcprivacy */; };
 		1A3B3F2C1BE9D4F200C5A7C5 /* FinderCoreFFI in Frameworks */ = {isa = PBXBuildFile; productRef = 1A3B3F2B1BE9D4F200C5A7C5 /* FinderCoreFFI */; };
+		1A3B3F2E1BE9D4F200C5A7C6 /* libfinder_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A3B3F2F1BE9D4F200C5A7C7 /* libfinder_core.dylib */; };
 		1AC5F0021C23456800ABCDEF /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */; };
 		1AC5F0041C23456800ABCDEF /* ResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0051C23456800ABCDEF /* ResultRow.swift */; };
 		1AC5F0061C23456800ABCDEF /* QuickLookHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC5F0071C23456800ABCDEF /* QuickLookHelper.swift */; };
@@ -40,7 +41,22 @@
 		1B0E1F041D5C123400000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1B0E1F061D5C123400000001 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		1B0E1F081D5C123400000001 /* SubscriptionPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionPaywallView.swift; sourceTree = "<group>"; };
+		1A3B3F2F1BE9D4F200C5A7C7 /* libfinder_core.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libfinder_core.dylib; path = "../target/release/libfinder_core.dylib"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		1A3B3F301BE9D4F200C5A7C8 /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				1A3B3F2E1BE9D4F200C5A7C6 /* libfinder_core.dylib in Frameworks */,
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		1A3B3F121BE9D4F200C5A7C5 /* Frameworks */ = {
@@ -111,6 +127,7 @@
 				1A3B3F111BE9D4F200C5A7C5 /* Sources */,
 				1A3B3F121BE9D4F200C5A7C5 /* Frameworks */,
 				1A3B3F131BE9D4F200C5A7C5 /* Resources */,
+				1A3B3F301BE9D4F200C5A7C8 /* Embed Libraries */,
 			);
 			buildRules = (
 			);
