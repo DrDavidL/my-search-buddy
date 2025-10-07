@@ -102,6 +102,14 @@ lipo -create -output "$UNIVERSAL_LIB" "$X86_LIB" "$ARM_LIB"
 echo "Setting install name to @rpath"
 install_name_tool -id "@rpath/libfinder_core.dylib" "$UNIVERSAL_LIB"
 
+# Sign the library if we have a code signing identity
+if [ "${CODE_SIGNING_REQUIRED:-NO}" = "YES" ] && [ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ] && [ "${EXPANDED_CODE_SIGN_IDENTITY}" != "-" ]; then
+  echo "Code signing libfinder_core.dylib with ${EXPANDED_CODE_SIGN_IDENTITY}"
+  /usr/bin/codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY}" --timestamp --options runtime "$UNIVERSAL_LIB" || {
+    echo "Warning: Code signing failed. The library will be signed later in the build process."
+  }
+fi
+
 echo "Distributing libfinder_core.dylib"
 cp "$UNIVERSAL_LIB" "$REPO_ROOT/target/release/libfinder_core.dylib"
 

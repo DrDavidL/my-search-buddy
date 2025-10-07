@@ -205,6 +205,26 @@
 			shellPath = /bin/sh;
 			shellScript = "cd \"$SRCROOT/..\"\n./scripts/build_finder_core_universal.sh\n";
 		};
+		1A3B3F311BE9D4F200C5A7C9 /* Sign Embedded Libraries */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)",
+			);
+			name = "Sign Embedded Libraries";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/.libfinder_core_signed",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Sign embedded dylibs\nset -e\n\nif [ \"${CODE_SIGNING_REQUIRED}\" = \"YES\" ] && [ \"${EXPANDED_CODE_SIGN_IDENTITY}\" != \"\" ] && [ \"${EXPANDED_CODE_SIGN_IDENTITY}\" != \"-\" ]; then\n  FRAMEWORKS_DIR=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\n  if [ -d \"$FRAMEWORKS_DIR\" ]; then\n    for dylib in \"$FRAMEWORKS_DIR\"/*.dylib; do\n      if [ -f \"$dylib\" ]; then\n        echo \"Signing $dylib\"\n        /usr/bin/codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --timestamp --options runtime \"$dylib\"\n        touch \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/.libfinder_core_signed\"\n      fi\n    done\n  fi\nfi\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
