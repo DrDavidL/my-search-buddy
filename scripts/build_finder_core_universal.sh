@@ -102,6 +102,12 @@ lipo -create -output "$UNIVERSAL_LIB" "$X86_LIB" "$ARM_LIB"
 echo "Setting install name to @rpath"
 install_name_tool -id "@rpath/libfinder_core.dylib" "$UNIVERSAL_LIB"
 
+# Generate dSYM for debugging/crash reporting
+echo "Generating dSYM for libfinder_core.dylib"
+DSYM_DIR="$UNIVERSAL_DIR/libfinder_core.dylib.dSYM"
+rm -rf "$DSYM_DIR"
+dsymutil "$UNIVERSAL_LIB" -o "$DSYM_DIR"
+
 # Sign the library if we have a code signing identity
 if [ "${CODE_SIGNING_REQUIRED:-NO}" = "YES" ] && [ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ] && [ "${EXPANDED_CODE_SIGN_IDENTITY}" != "-" ]; then
   echo "Code signing libfinder_core.dylib with ${EXPANDED_CODE_SIGN_IDENTITY}"
@@ -110,8 +116,10 @@ if [ "${CODE_SIGNING_REQUIRED:-NO}" = "YES" ] && [ -n "${EXPANDED_CODE_SIGN_IDEN
   }
 fi
 
-echo "Distributing libfinder_core.dylib"
+echo "Distributing libfinder_core.dylib and dSYM"
 cp "$UNIVERSAL_LIB" "$REPO_ROOT/target/release/libfinder_core.dylib"
+rm -rf "$REPO_ROOT/target/release/libfinder_core.dylib.dSYM"
+cp -R "$DSYM_DIR" "$REPO_ROOT/target/release/libfinder_core.dylib.dSYM"
 
 # Copies into additional convenience locations are best-effort only. Xcode's
 # sandbox blocks writes to paths that are not declared as script outputs, so we

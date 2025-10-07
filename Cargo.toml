@@ -3,3 +3,6 @@ members = [
     "finder-core"
 ]
 resolver = "2"
+
+[profile.release]
+debug = true  # Include debug symbols for dSYM generation

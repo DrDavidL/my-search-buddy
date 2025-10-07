@@ -128,6 +128,7 @@
 				1A3B3F121BE9D4F200C5A7C5 /* Frameworks */,
 				1A3B3F131BE9D4F200C5A7C5 /* Resources */,
 				1A3B3F301BE9D4F200C5A7C8 /* Embed Libraries */,
+				1A3B3F311BE9D4F200C5A7C9 /* Copy dSYM */,
 			);
 			buildRules = (
 			);
@@ -200,12 +201,13 @@
 			);
 			outputPaths = (
 				"$(SRCROOT)/../target/release/libfinder_core.dylib",
+				"$(SRCROOT)/../target/release/libfinder_core.dylib.dSYM",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "cd \"$SRCROOT/..\"\n./scripts/build_finder_core_universal.sh\n";
 		};
-		1A3B3F311BE9D4F200C5A7C9 /* Sign Embedded Libraries */ = {
+		1A3B3F311BE9D4F200C5A7C9 /* Copy dSYM */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -213,17 +215,15 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)",
 			);
-			name = "Sign Embedded Libraries";
+			name = "Copy dSYM";
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/.libfinder_core_signed",
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
-			shellScript = "# Sign embedded dylibs\nset -e\n\nif [ \"${CODE_SIGNING_REQUIRED}\" = \"YES\" ] && [ \"${EXPANDED_CODE_SIGN_IDENTITY}\" != \"\" ] && [ \"${EXPANDED_CODE_SIGN_IDENTITY}\" != \"-\" ]; then\n  FRAMEWORKS_DIR=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\n  if [ -d \"$FRAMEWORKS_DIR\" ]; then\n    for dylib in \"$FRAMEWORKS_DIR\"/*.dylib; do\n      if [ -f \"$dylib\" ]; then\n        echo \"Signing $dylib\"\n        /usr/bin/codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --timestamp --options runtime \"$dylib\"\n        touch \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/.libfinder_core_signed\"\n      fi\n    done\n  fi\nfi\n";
+			shellScript = "# Copy dSYM for archiving (runs during Archive only)\nset -e\n\nDSYM_SRC=\"${SRCROOT}/../target/release/libfinder_core.dylib.dSYM\"\nDSYM_DEST=\"${TARGET_BUILD_DIR}/libfinder_core.dylib.dSYM\"\n\nif [ -d \"$DSYM_SRC\" ]; then\n  echo \"Copying dSYM from $DSYM_SRC to $DSYM_DEST\"\n  ditto \"$DSYM_SRC\" \"$DSYM_DEST\"\n  echo \"dSYM copied successfully\"\nelse\n  echo \"Warning: dSYM not found at $DSYM_SRC\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
