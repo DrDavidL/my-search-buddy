@@ -209,12 +209,14 @@
 		};
 		1A3B3F311BE9D4F200C5A7C9 /* Copy dSYM */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"$(SRCROOT)/../target/release/libfinder_core.dylib.dSYM",
 			);
 			name = "Copy dSYM";
 			outputFileListPaths = (
@@ -222,9 +224,9 @@
 			outputPaths = (
 				"$(DWARF_DSYM_FOLDER_PATH)/libfinder_core.dylib.dSYM",
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Copy dSYM for archiving (runs during Archive only)\nset -e\n\nDSYM_SRC=\"${SRCROOT}/../target/release/libfinder_core.dylib.dSYM\"\nDSYM_DEST=\"${DWARF_DSYM_FOLDER_PATH}/libfinder_core.dylib.dSYM\"\n\nif [ -d \"$DSYM_SRC\" ]; then\n  echo \"Copying dSYM to ${DWARF_DSYM_FOLDER_PATH}\"\n  ditto \"$DSYM_SRC\" \"$DSYM_DEST\"\n  echo \"dSYM copied successfully\"\nelse\n  echo \"Warning: dSYM not found at $DSYM_SRC\"\nfi\n";
+			shellScript = "# Copy dSYM (for App Store archiving)\nset -e\n\nDSYM_SRC=\"${SRCROOT}/../target/release/libfinder_core.dylib.dSYM\"\nDSYM_DEST=\"${DWARF_DSYM_FOLDER_PATH}/libfinder_core.dylib.dSYM\"\n\nif [ -d \"$DSYM_SRC\" ]; then\n  echo \"Copying dSYM to ${DWARF_DSYM_FOLDER_PATH}\"\n  rm -rf \"$DSYM_DEST\"\n  cp -R \"$DSYM_SRC\" \"$DSYM_DEST\"\n  echo \"dSYM copied successfully\"\nelse\n  echo \"Warning: dSYM not found at $DSYM_SRC (this is normal for debug builds)\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -389,6 +391,7 @@
 				DEVELOPMENT_TEAM = 55ZF693MYG;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MySearchBuddy/Info.plist;
@@ -420,6 +423,7 @@
 				DEVELOPMENT_TEAM = 55ZF693MYG;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MySearchBuddy/Info.plist;

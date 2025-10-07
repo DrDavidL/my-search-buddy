@@ -119,10 +119,12 @@ After: `@rpath/libfinder_core.dylib` → resolves to `@executable_path/../Framew
 5. **Embed Libraries** - Copies signed dylib to app bundle
 6. **Copy dSYM** - (Archive only) Copies dSYM for App Store
 
-### Sandbox Workarounds
-- Library signing: Done in build script (before embedding) to avoid sandbox restrictions
-- dSYM copying: Uses `DWARF_DSYM_FOLDER_PATH` and `runOnlyForDeploymentPostprocessing` flag
-- Output path declarations ensure sandbox permissions
+### Sandbox Configuration
+- **User Script Sandboxing Disabled**: Set `ENABLE_USER_SCRIPT_SANDBOXING = NO` to allow build scripts to copy dSYM files
+  - This affects *build-time* scripts only, NOT the app sandbox
+  - App still runs in sandbox (`ENABLE_APP_SANDBOX = YES`)
+- Library signing: Done in build script (before embedding) to work around Xcode limitations
+- dSYM copying: Declared input/output paths for proper dependency tracking
 
 ## Next Steps
 
