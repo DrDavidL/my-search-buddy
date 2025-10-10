@@ -28,9 +28,13 @@ the project active and well-maintained.
 
 ## Repository Structure
 
-- **`finder-core`** - Rust search engine (indexing, querying, file scanning)
-- **`mac-app`** - SwiftUI macOS application with modern Mac design
-- **`scripts`** - Build automation and universal binary creation
+This is a **monorepo** containing macOS and iOS apps sharing a common Rust search core:
+
+- **`core/finder-core`** - Rust search engine (indexing, querying, file scanning) - shared across platforms
+- **`macos/`** - SwiftUI macOS application with modern Mac design
+- **`ios/`** - iOS app (coming soon) - cross-cloud file search for iPhone/iPad
+- **`scripts/`** - Build automation and universal binary creation
+- **`ci_scripts/`** - Xcode Cloud CI/CD configuration
 
 ## Quick Start
 
@@ -50,7 +54,7 @@ cd my-search-buddy
 bash scripts/build_finder_core_universal.sh
 
 # 3. Build the Mac app
-cd mac-app
+cd macos
 xcodebuild -scheme MySearchBuddy -configuration Release build
 
 # 4. Run the app
@@ -62,8 +66,8 @@ open ~/Library/Developer/Xcode/DerivedData/MySearchBuddy-*/Build/Products/Releas
 # Rust tests
 cargo test -p finder-core
 
-# Swift FFI tests
-cd mac-app/Packages/FinderCoreFFI
+# Swift FFI tests (macOS)
+cd macos/Packages/FinderCoreFFI
 swift test
 ```
 
@@ -98,7 +102,7 @@ We are rolling out a user-facing knob for how much text to index per file:
 > **No uploads.** The app never sends file names or contents anywhere.  
 > **Transparent permissions.** You choose folders; access is sandboxed via security-scoped bookmarks.  
 > **No telemetry.** We don’t collect analytics.  
-> **App Store privacy label:** *Data Not Collected* (see [`Resources/PrivacyInfo.xcprivacy`](mac-app/Resources/PrivacyInfo.xcprivacy)).
+> **App Store privacy label:** *Data Not Collected* (see [`Resources/PrivacyInfo.xcprivacy`](macos/Resources/PrivacyInfo.xcprivacy)).
 
 ## Trust & documentation
 
@@ -248,8 +252,8 @@ Permission is hereby granted, free of charge, to use, modify, and distribute thi
 
 ## FFI Header
 
-- `finder-core/include/finder_core.h` is committed for the Swift bridge. Regenerate it with:
+- `core/finder-core/include/finder_core.h` is committed for the Swift bridge. Regenerate it with:
   ```bash
-  cbindgen --config finder-core/cbindgen.toml --crate finder-core --output finder-core/include/finder_core.h
+  cbindgen --config core/finder-core/cbindgen.toml --crate finder-core --output core/finder-core/include/finder_core.h
   ```
 - Build the dynamic library for Swift with `cargo build -p finder-core` (debug) or `cargo build -p finder-core --release` and point `FINDER_CORE_DYLIB` at the resulting `.dylib` before running Swift tests.

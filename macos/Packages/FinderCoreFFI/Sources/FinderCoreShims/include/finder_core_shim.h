@@ -1,3 +1,3 @@
 #pragma once
 
-#include "../../../../../../finder-core/include/finder_core.h"
+#include "../../../../../../core/finder-core/include/finder_core.h"

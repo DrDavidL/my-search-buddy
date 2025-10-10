@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "finder-core"
+    "core/finder-core",
 ]
 resolver = "2"
 

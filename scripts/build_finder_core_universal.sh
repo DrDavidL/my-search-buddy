@@ -127,8 +127,8 @@ cp -R "$DSYM_DIR" "$REPO_ROOT/target/release/libfinder_core.dylib.dSYM"
 # can still populate them).
 OPTIONAL_DESTINATIONS=(
   "$REPO_ROOT/target/debug"
-  "$REPO_ROOT/mac-app/target/release"
-  "$REPO_ROOT/mac-app/target/debug"
+  "$REPO_ROOT/macos/target/release"
+  "$REPO_ROOT/macos/target/debug"
 )
 
 for dest in "${OPTIONAL_DESTINATIONS[@]}"; do
