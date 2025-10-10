@@ -777,7 +777,7 @@ struct InfoModalView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("About My Search Buddy")
                         .font(.title2.bold())
-                    Text("Version 0.2")
+                    Text("Version 0.3.2")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
