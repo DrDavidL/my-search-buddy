@@ -24,13 +24,20 @@ struct MySearchBuddyApp: App {
                 .environmentObject(indexCoordinator)
                 .environmentObject(fileTypeFilters)
         }
+        .defaultSize(width: 1100, height: 700)
+        .windowResizability(.contentSize)
         .commands {
             AboutCommands()
             QuickLookCommands()
             FileCommands()
             HelpCommands()
 
-            // Add main window to Window menu for reopening
+            // File menu - New Window command
+            CommandGroup(replacing: .newItem) {
+                NewWindowButton()
+            }
+
+            // Window menu - reopen main window
             CommandGroup(after: .windowList) {
                 Divider()
                 Button("Main Window") {
@@ -45,5 +52,18 @@ struct MySearchBuddyApp: App {
                 .environmentObject(indexCoordinator)
                 .environmentObject(fileTypeFilters)
         }
+    }
+}
+
+// Helper view to create a new window using SwiftUI's openWindow action
+struct NewWindowButton: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("New Window") {
+            NSLog("[NewWindowButton] Opening new window")
+            openWindow(id: "main")
+        }
+        .keyboardShortcut("n", modifiers: .command)
     }
 }
