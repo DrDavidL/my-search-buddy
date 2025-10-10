@@ -3,6 +3,8 @@ import FinderCoreFFI
 
 @main
 struct MySearchBuddyApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     init() {
         NSLog("[App] MySearchBuddyApp initializing")
     }
@@ -14,7 +16,7 @@ struct MySearchBuddyApp: App {
     @StateObject private var fileTypeFilters = FileTypeFilters()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
                 .environmentObject(bookmarkStore)
                 .environmentObject(coverageSettings)
@@ -27,6 +29,15 @@ struct MySearchBuddyApp: App {
             QuickLookCommands()
             FileCommands()
             HelpCommands()
+
+            // Add main window to Window menu for reopening
+            CommandGroup(after: .windowList) {
+                Divider()
+                Button("Main Window") {
+                    AppDelegate.showMainWindow()
+                }
+                .keyboardShortcut("1", modifiers: .command)
+            }
         }
         Settings {
             SettingsView()

@@ -22,6 +22,7 @@
 		1B0E1F051D5C123400000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1B0E1F041D5C123400000001 /* Assets.xcassets */; };
 		1B0E1F071D5C123400000001 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0E1F061D5C123400000001 /* PurchaseManager.swift */; };
 		1B0E1F091D5C123400000001 /* SubscriptionPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0E1F081D5C123400000001 /* SubscriptionPaywallView.swift */; };
+		1AAPPD002DAPPDELEGATE02 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AAPPD001DAPPDELEGATE01 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 		1B0E1F041D5C123400000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1B0E1F061D5C123400000001 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		1B0E1F081D5C123400000001 /* SubscriptionPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionPaywallView.swift; sourceTree = "<group>"; };
+		1AAPPD001DAPPDELEGATE01 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		1A3B3F2F1BE9D4F200C5A7C7 /* libfinder_core.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libfinder_core.dylib; path = "../target/release/libfinder_core.dylib"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -92,6 +94,7 @@
 			children = (
 				1B0E1F041D5C123400000001 /* Assets.xcassets */,
 				1A3B3F191BE9D4F200C5A7C5 /* MySearchBuddyApp.swift */,
+				1AAPPD001DAPPDELEGATE01 /* AppDelegate.swift */,
 				1A3B3F1A1BE9D4F200C5A7C5 /* ContentView.swift */,
 				1AFED0001C24567800ABCDE0 /* IndexCoordinator.swift */,
 				1AC5F0031C23456800ABCDEF /* SearchViewModel.swift */,
@@ -237,6 +240,7 @@
 			files = (
 				1AC5F0061C23456800ABCDEF /* QuickLookHelper.swift in Sources */,
 				1A3B3F201BE9D4F200C5A7C5 /* MySearchBuddyApp.swift in Sources */,
+				1AAPPD002DAPPDELEGATE02 /* AppDelegate.swift in Sources */,
 				1A3B3F211BE9D4F200C5A7C5 /* ContentView.swift in Sources */,
 				1AC5F0041C23456800ABCDEF /* ResultRow.swift in Sources */,
 				1AC5F0021C23456800ABCDEF /* SearchViewModel.swift in Sources */,
